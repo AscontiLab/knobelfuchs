@@ -8,14 +8,26 @@ class LogicPuzzle(PuzzleGenerator):
     emoji = "IQ"
 
     def generate(self, level: int, db=None) -> PuzzleData:
-        generators = [
-            self._set_rule,
-            self._attribute_classification,
-            self._clean_analogy,
-            self._symbol_block_logic,
-        ]
-        if level >= 10:
-            generators.append(self._text_deduction)
+        if level >= 18:
+            generators = [
+                self._text_deduction,
+                self._clean_analogy,
+                self._double_analogy,
+                self._rule_pairing,
+            ]
+        else:
+            generators = [
+                self._set_rule,
+                self._attribute_classification,
+                self._clean_analogy,
+                self._symbol_block_logic,
+            ]
+            if level >= 10:
+                generators.append(self._text_deduction)
+            if level >= 16:
+                generators.append(self._double_analogy)
+            if level >= 18:
+                generators.append(self._rule_pairing)
         return random.choice(generators)(level)
 
     def _set_rule(self, level: int) -> PuzzleData:
@@ -173,6 +185,50 @@ class LogicPuzzle(PuzzleGenerator):
             ),
         ]
         return self._build_from_tuple(random.choice(puzzles), max(level, 10))
+
+    def _double_analogy(self, level: int) -> PuzzleData:
+        puzzles = [
+            (
+                "Vogel verhaelt sich zu Nest wie Biene zu ... ?",
+                "Bienenstock",
+                ["Bienenstock", "Blume", "Wiese", "Honig"],
+                "Suche nicht nur ein Objekt, sondern den passenden Lebensort.",
+                "Der Vogel gehoert zu seinem Nest. Entsprechend gehoert die Biene zu ihrem Bienenstock.",
+                "double_relation",
+            ),
+            (
+                "Schluessel verhaelt sich zu Schloss wie Passwort zu ... ?",
+                "Konto",
+                ["Konto", "Tastatur", "Bildschirm", "Datei"],
+                "Beide Loesungen oeffnen oder entsperren etwas.",
+                "Ein Schluessel oeffnet ein Schloss. Ein Passwort entsperrt ein Konto oder den Zugang dazu.",
+                "double_relation",
+            ),
+        ]
+        return self._build_from_tuple(random.choice(puzzles), max(level, 18))
+
+    def _rule_pairing(self, level: int) -> PuzzleData:
+        puzzles = [
+            (
+                "Welches Paar folgt derselben Regel wie '3 -> 9'?\n"
+                "Die Regel ist: Zahl quadrieren.",
+                "4 -> 16",
+                ["4 -> 16", "4 -> 8", "5 -> 10", "6 -> 12"],
+                "Uebertrage die Regel exakt, nicht nur ungefaehr.",
+                "3 wird zu 9, weil 3^2 = 9. Genauso wird 4 durch Quadrieren zu 16.",
+                "rule_pairing",
+            ),
+            (
+                "Welches Paar folgt derselben Regel wie 'BAUM -> 4'?\n"
+                "Die Regel ist: Anzahl der Buchstaben zaehlen.",
+                "STEIN -> 5",
+                ["STEIN -> 5", "GRAS -> 5", "MOND -> 3", "WIND -> 6"],
+                "Die Regel bezieht sich nur auf die Wortlaenge.",
+                "BAUM hat 4 Buchstaben. STEIN hat 5 Buchstaben und folgt damit derselben Zaehllogik korrekt.",
+                "rule_pairing",
+            ),
+        ]
+        return self._build_from_tuple(random.choice(puzzles), max(level, 18))
 
     def _build_from_tuple(self, item: tuple, level: int) -> PuzzleData:
         question, answer, options, hint, explanation, reasoning_type = item

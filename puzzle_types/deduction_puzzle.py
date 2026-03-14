@@ -8,14 +8,26 @@ class DeductionPuzzle(PuzzleGenerator):
     emoji = "IQ"
 
     def generate(self, level: int, db=None) -> PuzzleData:
-        generators = [
-            self._order_logic,
-            self._seat_logic,
-            self._assignment_logic,
-            self._truth_logic,
-        ]
-        if level >= 12:
-            generators.append(self._two_condition_filter)
+        if level >= 18:
+            generators = [
+                self._five_person_order,
+                self._two_condition_filter,
+                self._truth_logic,
+                self._two_step_assignment,
+            ]
+        else:
+            generators = [
+                self._order_logic,
+                self._seat_logic,
+                self._assignment_logic,
+                self._truth_logic,
+            ]
+            if level >= 12:
+                generators.append(self._two_condition_filter)
+            if level >= 15:
+                generators.append(self._five_person_order)
+            if level >= 18:
+                generators.append(self._two_step_assignment)
         return random.choice(generators)(level)
 
     def _order_logic(self, level: int) -> PuzzleData:
@@ -134,6 +146,54 @@ class DeductionPuzzle(PuzzleGenerator):
             ),
             level=max(level, 12),
             reasoning_type="constraint_filter",
+        )
+
+    def _five_person_order(self, level: int) -> PuzzleData:
+        question = (
+            "Fuenf Personen stehen in einer Reihe: Ada, Ben, Clara, David und Eva.\n"
+            "Ben steht direkt rechts von Ada.\n"
+            "Clara steht nicht am Rand.\n"
+            "David steht links von Clara.\n"
+            "Eva steht ganz rechts.\n\n"
+            "Wer steht an dritter Stelle?"
+        )
+
+        return self._build(
+            question=question,
+            answer="David",
+            options=["Ada", "Ben", "David", "Clara"],
+            hint="Setze zuerst den festen rechten Rand und den Zweierblock.",
+            explanation=(
+                "Eva steht auf Platz 5. Ada und Ben bilden den Block 1-2 oder 2-3. "
+                "Clara steht nicht am Rand und David links von Clara. "
+                "Wuerde Ada auf Platz 2 stehen, waere Ben auf 3 und fuer David links von Clara gaebe es keine passende Anordnung mehr. "
+                "Also stehen Ada und Ben auf 1 und 2, David auf 3, Clara auf 4 und Eva auf 5."
+            ),
+            level=max(level, 18),
+            reasoning_type="multi_order_deduction",
+        )
+
+    def _two_step_assignment(self, level: int) -> PuzzleData:
+        question = (
+            "Drei Personen - Jana, Karim und Leo - fahren jeweils mit Zug, Bus oder Rad.\n"
+            "Jana faehrt nicht mit dem Bus.\n"
+            "Karim faehrt nicht mit dem Rad.\n"
+            "Leo faehrt nicht mit dem Zug.\n"
+            "Jana faehrt nicht mit dem Rad.\n\n"
+            "Womit faehrt Jana?"
+        )
+
+        return self._build(
+            question=question,
+            answer="Zug",
+            options=["Zug", "Bus", "Rad", "nicht bestimmbar"],
+            hint="Nutze die doppelte Einschraenkung bei Jana zuerst.",
+            explanation=(
+                "Jana faehrt weder Bus noch Rad, also bleibt fuer sie nur der Zug. "
+                "Danach bleiben fuer Karim und Leo Bus und Rad, was ebenfalls konsistent ist."
+            ),
+            level=max(level, 18),
+            reasoning_type="assignment_chain",
         )
 
     def _build(

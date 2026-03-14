@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from database import engine, Base
+from database import engine, Base, ensure_runtime_schema
 from routes import player, puzzle, dashboard
 
 # Datenbank-Tabellen erstellen
 Base.metadata.create_all(bind=engine)
+ensure_runtime_schema()
 
 app = FastAPI(title="KnobelFuchs 🦊")
 

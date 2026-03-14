@@ -11,6 +11,20 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
+def challenge_pool_label(level: int) -> str:
+    if level >= 18:
+        return "Meisterpool"
+    if level >= 14:
+        return "Expertenpool"
+    if level >= 10:
+        return "Fortgeschritten"
+    return "Grundstufe"
+
+
+def profile_label(mode: str) -> str:
+    return "Erwachsenenprofil" if mode == "adult" else "Kinderprofil"
+
+
 @router.get("/dashboard/{player_id}", response_class=HTMLResponse)
 async def dashboard(request: Request, player_id: int, db: Session = Depends(get_db)):
     player = db.get(Player, player_id)
@@ -68,6 +82,8 @@ async def dashboard(request: Request, player_id: int, db: Session = Depends(get_
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "player": player,
+        "profile_label": profile_label(player.profile_mode),
+        "challenge_pool_label": challenge_pool_label(player.current_level),
         "rate": rate,
         "stats_by_type": stats_by_type,
         "type_labels": type_labels,

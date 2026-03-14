@@ -11,7 +11,7 @@ from database import get_db
 from game_settings import MIN_GAME_LEVEL
 from models import Player, PuzzleAttempt
 from difficulty import update_difficulty
-from puzzle_types import get_iq_puzzle, get_random_puzzle
+from puzzle_types import get_iq_puzzle, get_random_puzzle, puzzle_signature
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -19,6 +19,28 @@ templates = Jinja2Templates(directory="templates")
 # Temporaerer Speicher fuer aktuelle Raetsel (player_id -> puzzle_data)
 _current_puzzles: dict[int, dict] = {}
 _iq_sessions: dict[int, dict] = {}
+_recent_puzzle_signatures: dict[int, list[str]] = {}
+
+
+def _challenge_pool_label(level: int) -> str:
+    if level >= 18:
+        return "Meisterpool"
+    if level >= 14:
+        return "Expertenpool"
+    if level >= 10:
+        return "Fortgeschritten"
+    return "Grundstufe"
+
+
+def _profile_label(player: Player) -> str:
+    return "Erwachsenenprofil" if player.profile_mode == "adult" else "Kinderprofil"
+
+
+def _remember_signature(player_id: int, signature: str, limit: int = 12) -> None:
+    recent = _recent_puzzle_signatures.setdefault(player_id, [])
+    recent.append(signature)
+    if len(recent) > limit:
+        del recent[:-limit]
 
 
 def _apply_attempt_to_player(player: Player, is_correct: bool) -> None:
@@ -69,8 +91,10 @@ async def get_puzzle(player_id: int, db: Session = Depends(get_db)):
         player.current_level = MIN_GAME_LEVEL
         db.commit()
 
-    puzzle = get_random_puzzle(player.current_level, db=db)
+    recent_signatures = set(_recent_puzzle_signatures.get(player_id, []))
+    puzzle = get_random_puzzle(player.current_level, db=db, exclude_signatures=recent_signatures)
     puzzle_dict = puzzle.to_dict()
+    puzzle_dict["signature"] = puzzle_signature(puzzle)
 
     # Speichere fuer Antwort-Check
     _current_puzzles[player_id] = puzzle_dict
@@ -84,6 +108,8 @@ async def get_puzzle(player_id: int, db: Session = Depends(get_db)):
         "difficulty": puzzle.difficulty,
         "reasoning_type": puzzle.reasoning_type,
         "player_level": player.current_level,
+        "challenge_pool": _challenge_pool_label(player.current_level),
+        "profile_mode": player.profile_mode,
         "streak": player.streak,
     }
     return JSONResponse(response)
@@ -132,23 +158,39 @@ async def check_answer(player_id: int, request: Request, db: Session = Depends(g
     level_change = update_difficulty(db, player)
 
     # Ermutigende Nachrichten
-    if is_correct:
-        messages = [
-            "Super gemacht! 🎉", "Richtig! Du bist ein Fuchs! 🦊",
-            "Genau! Weiter so! 💪", "Perfekt! 🌟", "Klasse! 🏆",
-            "Du bist ein Knobel-Profi! 🧠", "Wow, das war schnell! ⚡",
-        ]
+    if player.profile_mode == "adult":
+        if is_correct:
+            messages = [
+                "Korrekt.", "Richtig geloest.", "Saubere Loesung.",
+                "Treffer.", "Stark hergeleitet.",
+            ]
+        else:
+            messages = [
+                "Nicht korrekt. Nimm die Regel nochmal auseinander.",
+                "Knapp daneben. Pruefe die Struktur noch einmal.",
+                "Noch nicht. Der Loesungsweg steckt in der Regel.",
+            ]
     else:
-        messages = [
-            "Nicht ganz, aber beim naechsten Mal! 💪",
-            "Fast! Probier's nochmal! 🌟",
-            "Uebung macht den Meister! 🦊",
-            "Kopf hoch, das naechste schaffst du! 💫",
-        ]
+        if is_correct:
+            messages = [
+                "Super gemacht! 🎉", "Richtig! Du bist ein Fuchs! 🦊",
+                "Genau! Weiter so! 💪", "Perfekt! 🌟", "Klasse! 🏆",
+                "Du bist ein Knobel-Profi! 🧠", "Wow, das war schnell! ⚡",
+            ]
+        else:
+            messages = [
+                "Nicht ganz, aber beim naechsten Mal! 💪",
+                "Fast! Probier's nochmal! 🌟",
+                "Uebung macht den Meister! 🦊",
+                "Kopf hoch, das naechste schaffst du! 💫",
+            ]
 
     message = random.choice(messages)
 
     # Aufraemen
+    signature = puzzle_data.get("signature")
+    if signature:
+        _remember_signature(player_id, signature)
     _current_puzzles.pop(player_id, None)
 
     return JSONResponse({
@@ -183,13 +225,15 @@ async def start_iq_session(player_id: int, db: Session = Depends(get_db)):
     session_id = secrets.token_urlsafe(12)
     base_level = max(player.current_level, MIN_GAME_LEVEL + 1)
     total_questions = 10
-    level_plan = [min(base_level + (idx // 2), 16) for idx in range(total_questions)]
+    level_plan = [min(base_level + idx, 20) for idx in range(total_questions)]
 
     _iq_sessions[player_id] = {
         "session_id": session_id,
         "current_index": 0,
         "levels": level_plan,
         "results": [],
+        "asked_signatures": [],
+        "profile_mode": player.profile_mode,
         "started_level": base_level,
         "total_questions": total_questions,
     }
@@ -264,11 +308,14 @@ async def _next_iq_question(player_id: int, db: Session):
         return JSONResponse({"error": "Keine aktive IQ-Session"}, status_code=400)
 
     level = session["levels"][session["current_index"]]
-    puzzle = get_iq_puzzle(level, db=db)
+    excluded = set(session.get("asked_signatures", []))
+    puzzle = get_iq_puzzle(level, db=db, exclude_signatures=excluded)
     puzzle_dict = puzzle.to_dict()
     puzzle_dict["mode"] = "iq"
     puzzle_dict["session_id"] = session["session_id"]
+    puzzle_dict["signature"] = puzzle_signature(puzzle)
     _current_puzzles[player_id] = puzzle_dict
+    session.setdefault("asked_signatures", []).append(puzzle_dict["signature"])
 
     return JSONResponse({
         "mode": "iq",
@@ -301,12 +348,42 @@ def _build_iq_summary(player_id: int) -> dict:
         if item["is_correct"]:
             strong_types[item["type"]]["correct"] += 1
 
+    started_level = session["started_level"]
+    pool_name = _challenge_pool_label(started_level)
+    if correct >= 9:
+        benchmark_title = "Ausnahmestark"
+    elif correct >= 7:
+        benchmark_title = "Expertenniveau"
+    elif correct >= 5:
+        benchmark_title = "Stark"
+    elif correct >= 3:
+        benchmark_title = "Fortgeschritten"
+    else:
+        benchmark_title = "Im Aufbau"
+
+    player_profile = session.get("profile_mode", "kid")
+    if player_profile == "adult":
+        benchmark_text = (
+            f"Du arbeitest aktuell im {pool_name} und hast heute {correct} von {total} Aufgaben geloest."
+        )
+    elif started_level >= 14:
+        benchmark_text = (
+            f"Du bewegst dich bereits ueber dem normalen Kinderpfad und loest Aufgaben aus dem {pool_name}."
+        )
+    else:
+        benchmark_text = (
+            f"Du loest aktuell Aufgaben aus der Stufe '{pool_name}' und baust dir damit einen klaren Expertenpfad auf."
+        )
+
     return {
         "mode": "iq_summary",
         "correct": correct,
         "total": total,
         "score_pct": round((correct / total) * 100) if total else 0,
         "avg_time_seconds": avg_time,
+        "pool_name": pool_name,
+        "benchmark_title": benchmark_title,
+        "benchmark_text": benchmark_text,
         "results": results,
         "by_type": strong_types,
     }

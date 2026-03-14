@@ -8,14 +8,26 @@ class MathPuzzle(PuzzleGenerator):
     emoji = "IQ"
 
     def generate(self, level: int, db=None) -> PuzzleData:
-        generators = [
-            self._equation_balance,
-            self._number_grid,
-            self._reverse_operation,
-            self._operator_logic,
-        ]
-        if level >= 10:
-            generators.append(self._hidden_rule)
+        if level >= 18:
+            generators = [
+                self._hidden_rule,
+                self._reverse_operation,
+                self._double_step_rule,
+                self._two_equation_transfer,
+            ]
+        else:
+            generators = [
+                self._equation_balance,
+                self._number_grid,
+                self._reverse_operation,
+                self._operator_logic,
+            ]
+            if level >= 10:
+                generators.append(self._hidden_rule)
+            if level >= 16:
+                generators.append(self._double_step_rule)
+            if level >= 18:
+                generators.append(self._two_equation_transfer)
         return random.choice(generators)(level)
 
     def _equation_balance(self, level: int) -> PuzzleData:
@@ -139,6 +151,54 @@ class MathPuzzle(PuzzleGenerator):
                 f"Beim zweiten Paar lautet das Produkt {candidate}×{x}={answer}."
             ),
             reasoning_type="rule_transfer",
+        )
+
+    def _double_step_rule(self, level: int) -> PuzzleData:
+        start = random.randint(3, 7)
+        question = (
+            "Welche Zahl kommt als naechstes?\n"
+            f"{start} → {start * 2 + 1} → {(start * 2 + 1) * 2 + 2} → ?"
+        )
+        answer = ((start * 2 + 1) * 2 + 2) * 2 + 3
+
+        return self._build_numeric(
+            question=question,
+            answer=answer,
+            level=max(level, 18),
+            hint="Jeder Schritt ist 'verdoppeln und danach eine wachsende Zahl addieren'.",
+            explanation=(
+                f"Aus {start} wird zuerst {start * 2 + 1} (×2, dann +1), danach {(start * 2 + 1) * 2 + 2} (×2, dann +2). "
+                f"Also folgt als naechster Schritt noch einmal ×2 und +3. Das ergibt {answer}."
+            ),
+            reasoning_type="double_step_rule",
+        )
+
+    def _two_equation_transfer(self, level: int) -> PuzzleData:
+        a = random.randint(2, 5)
+        b = random.randint(3, 6)
+        sum1 = a + b
+        prod1 = a * b
+        c = random.randint(4, 7)
+        d = random.randint(2, 4)
+        answer = c * d
+
+        question = (
+            "Uebertrage die Zahlenregel:\n"
+            f"({a}, {b}) -> ({sum1}, {prod1})\n"
+            f"({c}, {d}) -> ({c + d}, ?)\n\n"
+            "Welche Zahl fehlt?"
+        )
+
+        return self._build_numeric(
+            question=question,
+            answer=answer,
+            level=max(level, 18),
+            hint="Die erste Zielzahl ist die Summe. Was ist dann die zweite?",
+            explanation=(
+                f"Beim ersten Paar entsteht zuerst die Summe {a+b} und dann das Produkt {a*b}. "
+                f"Beim zweiten Paar ist die Summe schon {c+d}; die fehlende zweite Zielzahl ist daher das Produkt {c}×{d} = {answer}."
+            ),
+            reasoning_type="two_equation_transfer",
         )
 
     def _build_numeric(

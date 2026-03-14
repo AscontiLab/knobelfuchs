@@ -8,13 +8,25 @@ class MatrixPuzzle(PuzzleGenerator):
     emoji = "IQ"
 
     def generate(self, level: int, db=None) -> PuzzleData:
-        generators = [
-            self._symbol_count_matrix,
-            self._rotation_matrix,
-            self._pair_progression_matrix,
-        ]
-        if level >= 12:
-            generators.append(self._dual_rule_matrix)
+        if level >= 18:
+            generators = [
+                self._dual_rule_matrix,
+                self._rotation_matrix,
+                self._sum_matrix,
+                self._alternating_matrix,
+            ]
+        else:
+            generators = [
+                self._symbol_count_matrix,
+                self._rotation_matrix,
+                self._pair_progression_matrix,
+            ]
+            if level >= 12:
+                generators.append(self._dual_rule_matrix)
+            if level >= 16:
+                generators.append(self._sum_matrix)
+            if level >= 18:
+                generators.append(self._alternating_matrix)
         return random.choice(generators)(level)
 
     def _symbol_count_matrix(self, level: int) -> PuzzleData:
@@ -96,6 +108,46 @@ class MatrixPuzzle(PuzzleGenerator):
             ),
             level=max(level, 12),
             reasoning_type="matrix_dual_rule",
+        )
+
+    def _sum_matrix(self, level: int) -> PuzzleData:
+        question = (
+            "Welche Antwort passt in das leere Feld?\n\n"
+            "Zeile 1:  2   4   6\n"
+            "Zeile 2:  3   6   9\n"
+            "Zeile 3:  5   10   ?"
+        )
+        return self._build(
+            question=question,
+            answer="15",
+            options=["12", "15", "18", "20"],
+            hint="Jede Zeile folgt derselben Multiplikationslogik.",
+            explanation=(
+                "In jeder Zeile ist die zweite Zahl das Doppelte der ersten und die dritte Zahl das Dreifache der ersten. "
+                "Bei 5 entstehen also 10 und 15. Unten rechts fehlt deshalb 15."
+            ),
+            level=max(level, 18),
+            reasoning_type="matrix_sum_rule",
+        )
+
+    def _alternating_matrix(self, level: int) -> PuzzleData:
+        question = (
+            "Welche Antwort passt in das leere Feld?\n\n"
+            "Zeile 1:  ▲   ○   ▲\n"
+            "Zeile 2:  ○   ▲   ○\n"
+            "Zeile 3:  ▲   ○   ?"
+        )
+        return self._build(
+            question=question,
+            answer="▲",
+            options=["▲", "○", "■", "◆"],
+            hint="Achte auf das Schachbrettmuster der Symbole.",
+            explanation=(
+                "Die Symbole wechseln sich in jeder Zeile und Spalte ab. "
+                "In der dritten Zeile steht daher nach ▲ und ○ wieder ▲."
+            ),
+            level=max(level, 18),
+            reasoning_type="matrix_alternation",
         )
 
     def _build(

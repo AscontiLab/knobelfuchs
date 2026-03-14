@@ -10,6 +10,11 @@ from models import Player
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+PROFILE_LABELS = {
+    "kid": "Kinderprofil",
+    "adult": "Erwachsenenprofil",
+}
+
 AVATAR_EMOJIS = [
     "🦊", "🐱", "🐶", "🦁", "🐼", "🐨", "🦄", "🐸",
     "🐵", "🦋", "🐝", "🐢", "🐬", "🦉", "🐧", "🐰",
@@ -24,6 +29,7 @@ async def select_player(request: Request, db: Session = Depends(get_db)):
         "request": request,
         "players": players,
         "avatars": AVATAR_EMOJIS,
+        "profile_labels": PROFILE_LABELS,
     })
 
 
@@ -31,13 +37,20 @@ async def select_player(request: Request, db: Session = Depends(get_db)):
 async def create_player(
     name: str = Form(...),
     avatar: str = Form("🦊"),
+    profile_mode: str = Form("kid"),
     db: Session = Depends(get_db),
 ):
+    profile_mode = profile_mode if profile_mode in PROFILE_LABELS else "kid"
     existing = db.query(Player).filter(Player.name == name).first()
     if existing:
         return RedirectResponse(url=f"/play/{existing.id}", status_code=303)
 
-    player = Player(name=name, avatar_emoji=avatar, current_level=MIN_GAME_LEVEL)
+    player = Player(
+        name=name,
+        avatar_emoji=avatar,
+        profile_mode=profile_mode,
+        current_level=MIN_GAME_LEVEL,
+    )
     db.add(player)
     db.commit()
     db.refresh(player)

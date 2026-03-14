@@ -12,6 +12,7 @@ class Player(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(50), unique=True, nullable=False)
     avatar_emoji = Column(String(10), default="🦊")
+    profile_mode = Column(String(20), default="kid")
     current_level = Column(Integer, default=MIN_GAME_LEVEL)
     total_solved = Column(Integer, default=0)
     total_attempts = Column(Integer, default=0)

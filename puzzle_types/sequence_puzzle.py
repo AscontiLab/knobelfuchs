@@ -8,16 +8,31 @@ class SequencePuzzle(PuzzleGenerator):
     emoji = "IQ"
 
     def generate(self, level: int, db=None) -> PuzzleData:
-        generators = [
-            self._alternating_difference,
-            self._second_order_difference,
-            self._growing_multiplier,
-            self._symbol_sequence,
-        ]
-        if level >= 10:
-            generators.append(self._interleaved_sequence)
-        if level >= 14:
-            generators.append(self._composite_rule)
+        if level >= 18:
+            generators = [
+                self._composite_rule,
+                self._interleaved_sequence,
+                self._nested_difference,
+            ]
+        elif level >= 14:
+            generators = [
+                self._second_order_difference,
+                self._growing_multiplier,
+                self._interleaved_sequence,
+                self._composite_rule,
+                self._nested_difference,
+            ]
+        else:
+            generators = [
+                self._alternating_difference,
+                self._second_order_difference,
+                self._growing_multiplier,
+                self._symbol_sequence,
+            ]
+            if level >= 10:
+                generators.append(self._interleaved_sequence)
+            if level >= 14:
+                generators.append(self._composite_rule)
         return random.choice(generators)(level)
 
     def _alternating_difference(self, level: int) -> PuzzleData:
@@ -141,6 +156,32 @@ class SequencePuzzle(PuzzleGenerator):
                 f"Der letzte Abzug ist {steps[-1]}, also lautet die naechste Zahl {answer}."
             ),
             reasoning_type="composite_rule",
+        )
+
+    def _nested_difference(self, level: int) -> PuzzleData:
+        start = random.randint(8, 18)
+        step = random.randint(3, 6)
+        growth = random.randint(2, 4)
+        seq = [start]
+        current_step = step
+        for i in range(5):
+            modifier = growth if i % 2 == 0 else -1
+            seq.append(seq[-1] + current_step)
+            current_step += modifier
+        answer = seq[-1]
+        visible = seq[:-1] + ["?"]
+
+        return self._build_numeric_puzzle(
+            question="Welche Zahl kommt als naechstes?\n" + " → ".join(str(v) for v in visible),
+            answer=answer,
+            level=max(level, 18),
+            hint="Die Abstaende folgen selbst einem Wechselmuster.",
+            explanation=(
+                f"Die Folge arbeitet mit veraenderlichen Differenzen. Start ist +{step}; "
+                f"danach wechseln sich 'groesser um {growth}' und 'kleiner um 1' ab. "
+                f"Deshalb folgt auf {seq[-2]} die Zahl {answer}."
+            ),
+            reasoning_type="nested_difference",
         )
 
     def _symbol_sequence(self, level: int) -> PuzzleData:
