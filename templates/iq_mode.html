@@ -120,6 +120,7 @@ function iqMode() {
         questionIndex: 0,
         totalQuestions: 10,
         progressPct: 0,
+        sessionId: null,
         startTime: null,
         summary: {results: []},
 
@@ -169,6 +170,7 @@ function iqMode() {
             this.loading = true;
             this.showSummary = false;
             this.selectedAnswer = null;
+            this.sessionId = null;
             const res = await fetch('/api/iq/start/{{ player.id }}', {method: 'POST'});
             const data = await res.json();
             this.applyQuestion(data);
@@ -182,6 +184,7 @@ function iqMode() {
             this.difficulty = data.difficulty;
             this.puzzleType = data.type;
             this.reasoningType = data.reasoning_type || 'general';
+            this.sessionId = data.session_id || this.sessionId;
             this.questionIndex = data.question_index;
             this.totalQuestions = data.total_questions;
             this.progressPct = data.session_progress_pct || 0;
@@ -196,10 +199,16 @@ function iqMode() {
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     answer: this.selectedAnswer,
+                    session_id: this.sessionId,
                     time_seconds: Math.round(timeSeconds * 10) / 10
                 })
             });
             const data = await res.json();
+            if (res.status === 409) {
+                alert(data.error || 'Die IQ-Session ist nicht mehr aktuell. Bitte starte neu.');
+                await this.startSession();
+                return;
+            }
             if (data.mode === 'iq_summary') {
                 this.summary = data;
                 this.showSummary = true;

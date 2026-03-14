@@ -11,18 +11,18 @@ Kleine FastAPI-Raetsel-App fuer Kinder. Nutzer waehlen ein Spielerprofil, loesen
 - Mehrere Puzzle-Typen in einer einfachen Web-App kombinieren
 - Optional Claude-generierte Raetsel cachen und wiederverwenden
 
-## Raetsel-Typen (8)
+## Raetsel-Typen
 
-| Typ | Beschreibung | IQ-Modus |
-|-----|-------------|----------|
-| math | Arithmetik, Gleichungen, Logik-Text | Ja |
-| logic | Attribut-Klassifikation, semantische Logik | Ja |
-| sequence | Zahlen-/Symbol-Muster | Ja |
-| deduction | Logische Schlussfolgerung | Ja |
-| matrix | 3x3 Matrix-Vervollstaendigung | Ja |
-| word | Kryptarithmetik, Anagramme | Nein |
-| emoji | Emoji-Raetsel (visuelles Wortspiel) | Nein |
-| riddle | Klassische Raetsel (12 deutsche) | Nein |
+| Typ | Beschreibung | Standard aktiv | IQ-Modus |
+|-----|--------------|----------------|----------|
+| math | Arithmetik, Gleichungen, Logik-Text | Ja | Ja |
+| logic | Attribut-Klassifikation, semantische Logik | Ja | Ja |
+| sequence | Zahlen-/Symbol-Muster | Ja | Ja |
+| deduction | Logische Schlussfolgerung | Ja | Ja |
+| matrix | 3x3 Matrix-Vervollstaendigung | Ja | Ja |
+| word | Wort-/Sprachraetsel, aktuell nur Legacy/Fun | Nein | Nein |
+| emoji | Emoji-Raetsel, aktuell nur Legacy/Fun | Nein | Nein |
+| riddle | Klassische Raetsel, aktuell nur Legacy/Fun | Nein | Nein |
 
 ## Bestandteile
 
@@ -31,7 +31,8 @@ Kleine FastAPI-Raetsel-App fuer Kinder. Nutzer waehlen ein Spielerprofil, loesen
 - `routes/`
   - Spieleranlage, Dashboard, Puzzle-API und IQ-Modus
 - `puzzle_types/`
-  - 8 Generatoren: math, logic, sequence, deduction, matrix, word, emoji, riddle
+  - 5 aktive Kern-Generatoren: math, logic, sequence, deduction, matrix
+  - 3 Legacy/Fun-Generatoren: word, emoji, riddle
 - `models.py`
   - SQLAlchemy-Modelle fuer Spieler, Versuche und Cache
 - `database.py`
@@ -108,4 +109,4 @@ Wichtige Routen:
 
 ## Status
 
-Raetsel-App mit 8 Puzzle-Typen, adaptivem Schwierigkeitsgrad (Level 7-20), IQ-Modus und Spieler-Profilen mit Streak-Tracking.
+Raetsel-App mit 5 aktiven Kern-Puzzle-Typen, 3 optionalen Legacy/Fun-Typen, adaptivem Schwierigkeitsgrad (Level 7-20), IQ-Modus und Spieler-Profilen mit Streak-Tracking.

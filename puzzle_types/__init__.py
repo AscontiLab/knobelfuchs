@@ -4,25 +4,29 @@ from typing import Optional
 from .base import PuzzleGenerator, PuzzleData
 from .math_puzzle import MathPuzzle
 from .logic_puzzle import LogicPuzzle
-from .word_puzzle import WordPuzzle
-from .emoji_puzzle import EmojiPuzzle
-from .riddle import RiddlePuzzle
 from .sequence_puzzle import SequencePuzzle
 from .deduction_puzzle import DeductionPuzzle
 from .matrix_puzzle import MatrixPuzzle
+from .word_puzzle import WordPuzzle
+from .emoji_puzzle import EmojiPuzzle
+from .riddle import RiddlePuzzle
 
-REGISTRY: list[PuzzleGenerator] = [
+STANDARD_GENERATORS: list[PuzzleGenerator] = [
     SequencePuzzle(),
     DeductionPuzzle(),
     MatrixPuzzle(),
     MathPuzzle(),
     LogicPuzzle(),
+]
+
+LEGACY_FUN_GENERATORS: list[PuzzleGenerator] = [
     WordPuzzle(),
     EmojiPuzzle(),
     RiddlePuzzle(),
 ]
 
-ALGORITHMIC_GENERATORS = [g for g in REGISTRY if g.type_name != "riddle"]
+REGISTRY: list[PuzzleGenerator] = STANDARD_GENERATORS + LEGACY_FUN_GENERATORS
+ALGORITHMIC_GENERATORS = list(STANDARD_GENERATORS)
 IQ_GENERATORS: list[PuzzleGenerator] = [
     SequencePuzzle(),
     DeductionPuzzle(),
@@ -34,12 +38,7 @@ IQ_GENERATORS: list[PuzzleGenerator] = [
 
 def get_random_puzzle(level: int, db=None) -> PuzzleData:
     """Generiert ein zufaelliges Raetsel passend zum Level."""
-    if level >= 12:
-        generators = [SequencePuzzle(), DeductionPuzzle(), MatrixPuzzle(), LogicPuzzle(), MathPuzzle(), WordPuzzle()]
-    elif level >= 7:
-        generators = [SequencePuzzle(), DeductionPuzzle(), MatrixPuzzle(), LogicPuzzle(), MathPuzzle(), WordPuzzle(), EmojiPuzzle()]
-    else:
-        generators = list(REGISTRY)
+    generators = list(STANDARD_GENERATORS)
     random.shuffle(generators)
 
     for gen in generators:

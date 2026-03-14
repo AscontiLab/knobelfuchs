@@ -1,5 +1,6 @@
 import json
 import random
+import secrets
 
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -18,6 +19,17 @@ templates = Jinja2Templates(directory="templates")
 # Temporaerer Speicher fuer aktuelle Raetsel (player_id -> puzzle_data)
 _current_puzzles: dict[int, dict] = {}
 _iq_sessions: dict[int, dict] = {}
+
+
+def _apply_attempt_to_player(player: Player, is_correct: bool) -> None:
+    player.total_attempts += 1
+    if is_correct:
+        player.total_solved += 1
+        player.streak += 1
+        if player.streak > player.best_streak:
+            player.best_streak = player.streak
+    else:
+        player.streak = 0
 
 
 @router.get("/play/{player_id}", response_class=HTMLResponse)
@@ -112,14 +124,7 @@ async def check_answer(player_id: int, request: Request, db: Session = Depends(g
     db.add(attempt)
 
     # Stats aktualisieren
-    player.total_attempts += 1
-    if is_correct:
-        player.total_solved += 1
-        player.streak += 1
-        if player.streak > player.best_streak:
-            player.best_streak = player.streak
-    else:
-        player.streak = 0
+    _apply_attempt_to_player(player, is_correct)
 
     db.commit()
 
@@ -175,11 +180,13 @@ async def start_iq_session(player_id: int, db: Session = Depends(get_db)):
     if not player:
         return JSONResponse({"error": "Spieler nicht gefunden"}, status_code=404)
 
+    session_id = secrets.token_urlsafe(12)
     base_level = max(player.current_level, MIN_GAME_LEVEL + 1)
     total_questions = 10
     level_plan = [min(base_level + (idx // 2), 16) for idx in range(total_questions)]
 
     _iq_sessions[player_id] = {
+        "session_id": session_id,
         "current_index": 0,
         "levels": level_plan,
         "results": [],
@@ -209,6 +216,10 @@ async def answer_iq_question(player_id: int, request: Request, db: Session = Dep
     except Exception:
         return JSONResponse({"error": "Ungueltiger Request"}, status_code=400)
 
+    client_session_id = body.get("session_id")
+    if client_session_id != session.get("session_id"):
+        return JSONResponse({"error": "Diese IQ-Session ist nicht mehr aktuell. Bitte starte neu."}, status_code=409)
+
     answer = body.get("answer", "")
     time_seconds = body.get("time_seconds", 0)
     is_correct = answer == puzzle_data["correct_answer"]
@@ -224,6 +235,7 @@ async def answer_iq_question(player_id: int, request: Request, db: Session = Dep
         hint_used=False,
     )
     db.add(attempt)
+    _apply_attempt_to_player(player, is_correct)
     db.commit()
 
     session["results"].append({
@@ -255,10 +267,12 @@ async def _next_iq_question(player_id: int, db: Session):
     puzzle = get_iq_puzzle(level, db=db)
     puzzle_dict = puzzle.to_dict()
     puzzle_dict["mode"] = "iq"
+    puzzle_dict["session_id"] = session["session_id"]
     _current_puzzles[player_id] = puzzle_dict
 
     return JSONResponse({
         "mode": "iq",
+        "session_id": session["session_id"],
         "question_index": session["current_index"] + 1,
         "total_questions": session["total_questions"],
         "type": puzzle.type,
