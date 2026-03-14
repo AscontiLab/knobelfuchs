@@ -95,6 +95,19 @@ Wichtige Routen:
 - `POST /api/answer/{player_id}` — Antwort pruefen
 - `GET /api/hint/{player_id}` — Hinweis abrufen
 
+## Tests
+
+```bash
+python3 -m pytest tests/ -v
+```
+
+125 Tests decken ab:
+- Alle 5 Puzzle-Generatoren (Math, Sequence, Deduction, Matrix, Logic) mit 35 Sub-Generatoren
+- Level-Routing (Level 18+ nur fortgeschrittene Aufgaben)
+- Stress-Tests (500 Puzzles ohne Crash)
+- Adaptiver Difficulty-Algorithmus (Promotion, Demotion, Grenzen, Min-Attempts)
+- Validierungsfunktion (`_is_valid_puzzle`) mit Reject-Cases
+
 ## Output
 
 - SQLite-Datenbank fuer Spieler- und Versuchsdaten
