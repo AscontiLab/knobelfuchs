@@ -13,7 +13,7 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/dashboard/{player_id}", response_class=HTMLResponse)
 async def dashboard(request: Request, player_id: int, db: Session = Depends(get_db)):
-    player = db.query(Player).get(player_id)
+    player = db.get(Player, player_id)
     if not player:
         return HTMLResponse("Spieler nicht gefunden", status_code=404)
 

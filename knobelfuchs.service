@@ -1,0 +1,14 @@
+[Unit]
+Description=KnobelFuchs Raetsel-App
+After=network.target
+
+[Service]
+Type=simple
+User=claude-agent
+WorkingDirectory=/home/claude-agent/knobelfuchs
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 127.0.0.1 --port 8090
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

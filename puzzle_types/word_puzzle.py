@@ -87,7 +87,9 @@ class WordPuzzle(PuzzleGenerator):
         random.shuffle(wrong)
         wrong = wrong[:3]
         while len(wrong) < 3:
-            wrong.append(self._get_word(level))
+            w = self._get_word(level)
+            if w != word and w not in wrong:
+                wrong.append(w)
 
         options = [word] + wrong[:3]
         random.shuffle(options)
@@ -116,7 +118,9 @@ class WordPuzzle(PuzzleGenerator):
         random.shuffle(wrong)
         wrong = wrong[:3]
         while len(wrong) < 3:
-            wrong.append(self._get_word(level))
+            w = self._get_word(level)
+            if w != word and w not in wrong:
+                wrong.append(w)
 
         options = [word] + wrong[:3]
         random.shuffle(options)

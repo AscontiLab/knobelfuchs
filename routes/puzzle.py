@@ -1,5 +1,5 @@
 import json
-import time
+import random
 
 from fastapi import APIRouter, Request, Depends
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -20,7 +20,7 @@ _current_puzzles: dict[int, dict] = {}
 
 @router.get("/play/{player_id}", response_class=HTMLResponse)
 async def play(request: Request, player_id: int, db: Session = Depends(get_db)):
-    player = db.query(Player).get(player_id)
+    player = db.get(Player, player_id)
     if not player:
         return HTMLResponse("Spieler nicht gefunden", status_code=404)
     return templates.TemplateResponse("puzzle.html", {
@@ -31,14 +31,14 @@ async def play(request: Request, player_id: int, db: Session = Depends(get_db)):
 
 @router.get("/api/puzzle/{player_id}")
 async def get_puzzle(player_id: int, db: Session = Depends(get_db)):
-    player = db.query(Player).get(player_id)
+    player = db.get(Player, player_id)
     if not player:
         return JSONResponse({"error": "Spieler nicht gefunden"}, status_code=404)
 
     puzzle = get_random_puzzle(player.current_level, db=db)
     puzzle_dict = puzzle.to_dict()
 
-    # Speichere fuer Antwort-Check (ohne correct_answer)
+    # Speichere fuer Antwort-Check
     _current_puzzles[player_id] = puzzle_dict
 
     # Sende ohne korrekte Antwort an Frontend
@@ -56,11 +56,15 @@ async def get_puzzle(player_id: int, db: Session = Depends(get_db)):
 
 @router.post("/api/answer/{player_id}")
 async def check_answer(player_id: int, request: Request, db: Session = Depends(get_db)):
-    player = db.query(Player).get(player_id)
+    player = db.get(Player, player_id)
     if not player:
         return JSONResponse({"error": "Spieler nicht gefunden"}, status_code=404)
 
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Ungueltiger Request"}, status_code=400)
+
     answer = body.get("answer", "")
     time_seconds = body.get("time_seconds", 0)
     hint_used = body.get("hint_used", False)
@@ -114,7 +118,6 @@ async def check_answer(player_id: int, request: Request, db: Session = Depends(g
             "Kopf hoch, das naechste schaffst du! 💫",
         ]
 
-    import random
     message = random.choice(messages)
 
     # Aufraemen
