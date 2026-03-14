@@ -85,7 +85,7 @@
                         <template x-for="(option, idx) in options" :key="idx">
                             <button @click="selectAnswer(option, $event)"
                                     class="btn-option option-enter w-full text-left px-5 py-4 rounded-2xl font-semibold text-lg
-                                           border-2 transition-all duration-200"
+                                           border-2 transition-all duration-200 outline-none focus:outline-none focus:ring-0"
                                     :class="[
                                         answered && option === correctAnswer
                                             ? 'bg-green-100 border-green-400 text-green-800 option-correct'
@@ -333,6 +333,7 @@ function puzzleGame() {
             this.loading = true;
             this.showResult = false;
             this.selectedAnswer = null;
+            this.correctAnswer = '';
             this.answered = false;
             this.hintShown = false;
             this.hintText = '';
