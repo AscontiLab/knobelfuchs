@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen flex flex-col" x-data="iqMode()" x-init="startSession()">
+    <header class="glass p-3 flex items-center justify-between sticky top-0 z-40">
+        <a href="/dashboard/{{ player.id }}" class="flex items-center gap-2 text-white group">
+            <span class="text-2xl">🧠</span>
+            <span class="font-bold hidden sm:inline">IQ-Modus</span>
+        </a>
+        <div class="glass rounded-full px-4 py-2 text-white font-bold text-sm">
+            <span x-text="progressLabel"></span>
+        </div>
+    </header>
+
+    <main class="flex-1 flex items-center justify-center p-4">
+        <div class="w-full max-w-2xl">
+            <div x-show="loading" x-cloak class="text-center py-16 text-white">
+                <div class="text-6xl mb-4">🧠</div>
+                <p class="font-bold text-xl">IQ-Session wird vorbereitet...</p>
+            </div>
+
+            <div x-show="!loading && !showSummary" x-cloak class="glass-strong rounded-3xl p-6 shadow-2xl">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="bg-white/70 text-slate-700 px-3 py-1 rounded-full text-sm font-bold" x-text="puzzleTypeLabel"></span>
+                    <span class="text-sm text-gray-500" x-text="'Schwierigkeit ' + difficulty"></span>
+                </div>
+
+                <div class="w-full bg-gray-200 rounded-full h-3 mb-6">
+                    <div class="h-3 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+                         :style="`width: ${progressPct}%`"></div>
+                </div>
+
+                <p class="text-xl font-bold text-gray-800 leading-relaxed whitespace-pre-line mb-6" x-text="question"></p>
+
+                <div class="space-y-3">
+                    <template x-for="(option, idx) in options" :key="idx">
+                        <button @click="selectedAnswer = option"
+                                class="w-full text-left px-5 py-4 rounded-2xl border-2 transition-all duration-200 font-semibold"
+                                :class="selectedAnswer === option
+                                    ? 'bg-fox-400 border-fox-500 text-white shadow-lg'
+                                    : 'bg-white border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50'">
+                            <span x-text="option"></span>
+                        </button>
+                    </template>
+                </div>
+
+                <div class="flex items-center justify-between mt-6">
+                    <div class="text-sm text-gray-500" x-text="reasoningTypeLabel"></div>
+                    <button @click="submitAnswer()"
+                            class="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold px-6 py-3 rounded-2xl shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            :disabled="!selectedAnswer">
+                        Weiter
+                    </button>
+                </div>
+            </div>
+
+            <div x-show="showSummary" x-cloak class="glass-strong rounded-3xl p-8 shadow-2xl">
+                <div class="text-center mb-6">
+                    <div class="text-6xl mb-3">🏁</div>
+                    <h1 class="text-3xl font-black text-gray-800">IQ-Modus abgeschlossen</h1>
+                    <p class="text-gray-500 mt-2">10 Denkaufgaben, ein zusammenhängender Testdurchlauf</p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-white rounded-2xl p-4 text-center">
+                        <div class="text-3xl font-black text-purple-600" x-text="summary.correct"></div>
+                        <div class="text-sm text-gray-500">Richtig</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 text-center">
+                        <div class="text-3xl font-black text-blue-600" x-text="summary.score_pct + '%'"></div>
+                        <div class="text-sm text-gray-500">Score</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 text-center">
+                        <div class="text-3xl font-black text-fox-500" x-text="summary.avg_time_seconds + 's'"></div>
+                        <div class="text-sm text-gray-500">Ø Zeit</div>
+                    </div>
+                </div>
+
+                <div class="space-y-3 max-h-[24rem] overflow-y-auto mb-6">
+                    <template x-for="(item, idx) in summary.results" :key="idx">
+                        <div class="bg-white rounded-2xl p-4 border"
+                             :class="item.is_correct ? 'border-green-200' : 'border-red-200'">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-slate-700" x-text="`Aufgabe ${idx + 1}`"></span>
+                                <span class="text-sm font-semibold"
+                                      :class="item.is_correct ? 'text-green-600' : 'text-red-500'"
+                                      x-text="item.is_correct ? 'Richtig' : 'Falsch'"></span>
+                            </div>
+                            <p class="text-sm text-slate-700 mb-2" x-text="item.question"></p>
+                            <p class="text-xs text-slate-500 mb-1">Deine Antwort: <span class="font-semibold" x-text="item.player_answer || '—'"></span></p>
+                            <p class="text-xs text-slate-500 mb-2">Richtige Antwort: <span class="font-semibold" x-text="item.correct_answer"></span></p>
+                            <p class="text-xs text-blue-700 bg-blue-50 rounded-xl p-3" x-text="item.explanation"></p>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="flex gap-3">
+                    <button @click="startSession()" class="flex-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-2xl">
+                        Nochmal testen
+                    </button>
+                    <a href="/dashboard/{{ player.id }}" class="flex-1 bg-white border border-gray-200 text-slate-700 font-bold py-3 rounded-2xl text-center">
+                        Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+function iqMode() {
+    return {
+        loading: true,
+        showSummary: false,
+        question: '',
+        options: [],
+        selectedAnswer: null,
+        difficulty: 0,
+        puzzleType: '',
+        reasoningType: '',
+        questionIndex: 0,
+        totalQuestions: 10,
+        progressPct: 0,
+        startTime: null,
+        summary: {results: []},
+
+        get progressLabel() {
+            return `${this.questionIndex}/${this.totalQuestions}`;
+        },
+
+        get puzzleTypeLabel() {
+            const labels = {
+                'math': 'Zahlenlogik',
+                'logic': 'Logik',
+                'sequence': 'Knobeltest',
+                'deduction': 'Logiktest',
+                'matrix': 'Matrixtest'
+            };
+            return labels[this.puzzleType] || this.puzzleType;
+        },
+
+        get reasoningTypeLabel() {
+            const labels = {
+                'alternating_sequence': 'Wechselmuster',
+                'second_order_sequence': 'Abstandslogik',
+                'growing_multiplier': 'Multiplikationsmuster',
+                'interleaved_sequence': 'Teilfolgen',
+                'composite_rule': 'Kombinationsregel',
+                'symbol_pattern': 'Symbolmuster',
+                'order_deduction': 'Reihenfolge',
+                'position_deduction': 'Platzlogik',
+                'assignment_deduction': 'Zuordnung',
+                'truth_table': 'Aussagenlogik',
+                'constraint_filter': 'Ausschlusslogik',
+                'equation_balance': 'Gleichungslogik',
+                'number_grid': 'Zahlenfeld',
+                'reverse_operation': 'Rueckwaerts denken',
+                'operator_precedence': 'Operatorlogik',
+                'rule_transfer': 'Regeltransfer',
+                'matrix_count_rule': 'Matrix-Muster',
+                'matrix_rotation': 'Rotation',
+                'matrix_coordinate_rule': 'Zeilen/Spalten-Regel',
+                'matrix_dual_rule': 'Kombinationsmatrix',
+                'general': 'Denkaufgabe'
+            };
+            return labels[this.reasoningType] || 'Denkaufgabe';
+        },
+
+        async startSession() {
+            this.loading = true;
+            this.showSummary = false;
+            this.selectedAnswer = null;
+            const res = await fetch('/api/iq/start/{{ player.id }}', {method: 'POST'});
+            const data = await res.json();
+            this.applyQuestion(data);
+            this.loading = false;
+        },
+
+        applyQuestion(data) {
+            this.question = data.question;
+            this.options = data.options;
+            this.selectedAnswer = null;
+            this.difficulty = data.difficulty;
+            this.puzzleType = data.type;
+            this.reasoningType = data.reasoning_type || 'general';
+            this.questionIndex = data.question_index;
+            this.totalQuestions = data.total_questions;
+            this.progressPct = data.session_progress_pct || 0;
+            this.startTime = Date.now();
+        },
+
+        async submitAnswer() {
+            if (!this.selectedAnswer) return;
+            const timeSeconds = (Date.now() - this.startTime) / 1000;
+            const res = await fetch('/api/iq/answer/{{ player.id }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    answer: this.selectedAnswer,
+                    time_seconds: Math.round(timeSeconds * 10) / 10
+                })
+            });
+            const data = await res.json();
+            if (data.mode === 'iq_summary') {
+                this.summary = data;
+                this.showSummary = true;
+                return;
+            }
+            this.applyQuestion(data);
+        }
+    };
+}
+</script>
+{% endblock %}

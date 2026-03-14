@@ -23,6 +23,13 @@ REGISTRY: list[PuzzleGenerator] = [
 ]
 
 ALGORITHMIC_GENERATORS = [g for g in REGISTRY if g.type_name != "riddle"]
+IQ_GENERATORS: list[PuzzleGenerator] = [
+    SequencePuzzle(),
+    DeductionPuzzle(),
+    MatrixPuzzle(),
+    LogicPuzzle(),
+    MathPuzzle(),
+]
 
 
 def get_random_puzzle(level: int, db=None) -> PuzzleData:
@@ -48,6 +55,22 @@ def get_random_puzzle(level: int, db=None) -> PuzzleData:
     if _is_valid_puzzle(fallback):
         return fallback
     return random.choice([SequencePuzzle(), DeductionPuzzle(), MatrixPuzzle()]).generate(max(level, 6))
+
+
+def get_iq_puzzle(level: int, db=None) -> PuzzleData:
+    """Generiert nur starke Denkaufgaben fuer den IQ-Modus."""
+    generators = list(IQ_GENERATORS)
+    random.shuffle(generators)
+
+    for gen in generators:
+        try:
+            puzzle = gen.generate(level, db=db)
+            if puzzle and _is_valid_puzzle(puzzle):
+                return puzzle
+        except Exception:
+            continue
+
+    return SequencePuzzle().generate(max(level, 8))
 
 
 def _is_valid_puzzle(puzzle: PuzzleData) -> bool:

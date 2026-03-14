@@ -10,13 +10,14 @@ from database import get_db
 from game_settings import MIN_GAME_LEVEL
 from models import Player, PuzzleAttempt
 from difficulty import update_difficulty
-from puzzle_types import get_random_puzzle
+from puzzle_types import get_iq_puzzle, get_random_puzzle
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 # Temporaerer Speicher fuer aktuelle Raetsel (player_id -> puzzle_data)
 _current_puzzles: dict[int, dict] = {}
+_iq_sessions: dict[int, dict] = {}
 
 
 @router.get("/play/{player_id}", response_class=HTMLResponse)
@@ -28,6 +29,20 @@ async def play(request: Request, player_id: int, db: Session = Depends(get_db)):
         player.current_level = MIN_GAME_LEVEL
         db.commit()
     return templates.TemplateResponse("puzzle.html", {
+        "request": request,
+        "player": player,
+    })
+
+
+@router.get("/iq/{player_id}", response_class=HTMLResponse)
+async def iq_mode(request: Request, player_id: int, db: Session = Depends(get_db)):
+    player = db.get(Player, player_id)
+    if not player:
+        return HTMLResponse("Spieler nicht gefunden", status_code=404)
+    if player.current_level < MIN_GAME_LEVEL:
+        player.current_level = MIN_GAME_LEVEL
+        db.commit()
+    return templates.TemplateResponse("iq_mode.html", {
         "request": request,
         "player": player,
     })
@@ -152,3 +167,132 @@ async def get_hint(player_id: int, db: Session = Depends(get_db)):
         return JSONResponse({"error": "Kein aktives Raetsel"}, status_code=400)
 
     return JSONResponse({"hint": puzzle_data.get("hint", "Denke gut nach!")})
+
+
+@router.post("/api/iq/start/{player_id}")
+async def start_iq_session(player_id: int, db: Session = Depends(get_db)):
+    player = db.get(Player, player_id)
+    if not player:
+        return JSONResponse({"error": "Spieler nicht gefunden"}, status_code=404)
+
+    base_level = max(player.current_level, MIN_GAME_LEVEL + 1)
+    total_questions = 10
+    level_plan = [min(base_level + (idx // 2), 16) for idx in range(total_questions)]
+
+    _iq_sessions[player_id] = {
+        "current_index": 0,
+        "levels": level_plan,
+        "results": [],
+        "started_level": base_level,
+        "total_questions": total_questions,
+    }
+
+    return await _next_iq_question(player_id, db)
+
+
+@router.post("/api/iq/answer/{player_id}")
+async def answer_iq_question(player_id: int, request: Request, db: Session = Depends(get_db)):
+    player = db.get(Player, player_id)
+    if not player:
+        return JSONResponse({"error": "Spieler nicht gefunden"}, status_code=404)
+
+    session = _iq_sessions.get(player_id)
+    if not session:
+        return JSONResponse({"error": "Keine aktive IQ-Session"}, status_code=400)
+
+    puzzle_data = _current_puzzles.get(player_id)
+    if not puzzle_data or puzzle_data.get("mode") != "iq":
+        return JSONResponse({"error": "Keine aktive IQ-Aufgabe"}, status_code=400)
+
+    try:
+        body = await request.json()
+    except Exception:
+        return JSONResponse({"error": "Ungueltiger Request"}, status_code=400)
+
+    answer = body.get("answer", "")
+    time_seconds = body.get("time_seconds", 0)
+    is_correct = answer == puzzle_data["correct_answer"]
+
+    attempt = PuzzleAttempt(
+        player_id=player_id,
+        puzzle_type=puzzle_data["type"],
+        difficulty=puzzle_data["difficulty"],
+        puzzle_data=json.dumps(puzzle_data, ensure_ascii=False),
+        player_answer=answer,
+        is_correct=is_correct,
+        time_seconds=time_seconds,
+        hint_used=False,
+    )
+    db.add(attempt)
+    db.commit()
+
+    session["results"].append({
+        "type": puzzle_data["type"],
+        "difficulty": puzzle_data["difficulty"],
+        "question": puzzle_data["question"],
+        "correct_answer": puzzle_data["correct_answer"],
+        "player_answer": answer,
+        "is_correct": is_correct,
+        "reasoning_type": puzzle_data.get("reasoning_type", "general"),
+        "explanation": puzzle_data.get("explanation", ""),
+        "time_seconds": time_seconds,
+    })
+    session["current_index"] += 1
+    _current_puzzles.pop(player_id, None)
+
+    if session["current_index"] >= session["total_questions"]:
+        return JSONResponse(_build_iq_summary(player_id))
+
+    return await _next_iq_question(player_id, db)
+
+
+async def _next_iq_question(player_id: int, db: Session):
+    session = _iq_sessions.get(player_id)
+    if not session:
+        return JSONResponse({"error": "Keine aktive IQ-Session"}, status_code=400)
+
+    level = session["levels"][session["current_index"]]
+    puzzle = get_iq_puzzle(level, db=db)
+    puzzle_dict = puzzle.to_dict()
+    puzzle_dict["mode"] = "iq"
+    _current_puzzles[player_id] = puzzle_dict
+
+    return JSONResponse({
+        "mode": "iq",
+        "question_index": session["current_index"] + 1,
+        "total_questions": session["total_questions"],
+        "type": puzzle.type,
+        "question": puzzle.question,
+        "options": puzzle.options,
+        "emoji": puzzle.emoji,
+        "difficulty": puzzle.difficulty,
+        "reasoning_type": puzzle.reasoning_type,
+        "session_progress_pct": round(((session["current_index"] + 1) / session["total_questions"]) * 100),
+    })
+
+
+def _build_iq_summary(player_id: int) -> dict:
+    session = _iq_sessions.pop(player_id, None)
+    if not session:
+        return {"error": "Keine aktive IQ-Session"}
+
+    results = session["results"]
+    correct = sum(1 for item in results if item["is_correct"])
+    total = len(results)
+    avg_time = round(sum(item["time_seconds"] for item in results) / total, 1) if total else 0
+    strong_types = {}
+    for item in results:
+        strong_types.setdefault(item["type"], {"total": 0, "correct": 0})
+        strong_types[item["type"]]["total"] += 1
+        if item["is_correct"]:
+            strong_types[item["type"]]["correct"] += 1
+
+    return {
+        "mode": "iq_summary",
+        "correct": correct,
+        "total": total,
+        "score_pct": round((correct / total) * 100) if total else 0,
+        "avg_time_seconds": avg_time,
+        "results": results,
+        "by_type": strong_types,
+    }
