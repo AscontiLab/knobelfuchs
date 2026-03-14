@@ -11,24 +11,39 @@ Kleine FastAPI-Raetsel-App fuer Kinder. Nutzer waehlen ein Spielerprofil, loesen
 - Mehrere Puzzle-Typen in einer einfachen Web-App kombinieren
 - Optional Claude-generierte Raetsel cachen und wiederverwenden
 
+## Raetsel-Typen (8)
+
+| Typ | Beschreibung | IQ-Modus |
+|-----|-------------|----------|
+| math | Arithmetik, Gleichungen, Logik-Text | Ja |
+| logic | Attribut-Klassifikation, semantische Logik | Ja |
+| sequence | Zahlen-/Symbol-Muster | Ja |
+| deduction | Logische Schlussfolgerung | Ja |
+| matrix | 3x3 Matrix-Vervollstaendigung | Ja |
+| word | Kryptarithmetik, Anagramme | Nein |
+| emoji | Emoji-Raetsel (visuelles Wortspiel) | Nein |
+| riddle | Klassische Raetsel (12 deutsche) | Nein |
+
 ## Bestandteile
 
 - `main.py`
   - FastAPI-Anwendung und Router-Registrierung
 - `routes/`
-  - Spieleranlage, Dashboard und Puzzle-API
+  - Spieleranlage, Dashboard, Puzzle-API und IQ-Modus
 - `puzzle_types/`
-  - Generatoren fuer Wort-, Logik-, Mathe-, Emoji- und Scherzfragen
+  - 8 Generatoren: math, logic, sequence, deduction, matrix, word, emoji, riddle
 - `models.py`
   - SQLAlchemy-Modelle fuer Spieler, Versuche und Cache
 - `database.py`
   - Engine und Sessions
 - `difficulty.py`
-  - Anpassung des Schwierigkeitsgrades
+  - Adaptiver Schwierigkeitsgrad (Level 7-20, Sliding-Window 8 Versuche)
+- `game_settings.py`
+  - MIN_LEVEL=7, MAX_LEVEL=20
 - `templates/` und `static/`
-  - HTML-Templates und Frontend-Assets
+  - HTML-Templates (inkl. IQ-Modus) und Frontend-Assets (Konfetti)
 - `knobelfuchs.service`
-  - Beispiel fuer systemd-Betrieb
+  - systemd-Unit fuer Port 8090
 
 ## Voraussetzungen
 
@@ -70,13 +85,14 @@ python3 -m uvicorn main:app --host 127.0.0.1 --port 8090
 
 Wichtige Routen:
 
-- `GET /`
-- `POST /player`
-- `GET /dashboard/{player_id}`
-- `GET /play/{player_id}`
-- `GET /api/puzzle/{player_id}`
-- `POST /api/answer/{player_id}`
-- `GET /api/hint/{player_id}`
+- `GET /` — Spielerauswahl
+- `POST /player` — Neuen Spieler anlegen
+- `GET /play/{player_id}` — Normal-Modus
+- `GET /iq/{player_id}` — IQ-Test (10 Fragen, steigend)
+- `GET /dashboard/{player_id}` — Stats pro Raetsel-Typ
+- `GET /api/puzzle/{player_id}` — Raetsel abrufen
+- `POST /api/answer/{player_id}` — Antwort pruefen
+- `GET /api/hint/{player_id}` — Hinweis abrufen
 
 ## Output
 
@@ -92,4 +108,4 @@ Wichtige Routen:
 
 ## Status
 
-Lokale Web-App fuer kindgerechte Raetsel mit mehreren Puzzle-Typen und einfachem Fortschrittssystem.
+Raetsel-App mit 8 Puzzle-Typen, adaptivem Schwierigkeitsgrad (Level 7-20), IQ-Modus und Spieler-Profilen mit Streak-Tracking.
