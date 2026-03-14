@@ -4,20 +4,21 @@
 
     <!-- Logo -->
     <div class="text-center mb-8 bounce-in">
-        <div class="text-7xl mb-2">🦊</div>
+        <div class="text-7xl mb-2" style="animation: floatAround 4s ease-in-out infinite;">🦊</div>
         <h1 class="text-4xl font-black text-white drop-shadow-lg">KnobelFuchs</h1>
-        <p class="text-white/80 text-lg mt-1">Raetsel, die schlau machen!</p>
+        <p class="text-white/80 text-lg mt-1 fade-in" style="animation-delay: 0.3s;">Raetsel, die schlau machen!</p>
     </div>
 
     <!-- Bestehende Spieler -->
     {% if players %}
-    <div class="w-full max-w-md mb-6 slide-up">
-        <h2 class="text-white font-bold text-lg mb-3 text-center">Wer spielt?</h2>
+    <div class="w-full max-w-md mb-6">
+        <h2 class="text-white font-bold text-lg mb-3 text-center fade-in">Wer spielt?</h2>
         <div class="grid grid-cols-2 gap-3">
             {% for p in players %}
             <a href="/play/{{ p.id }}"
-               class="glass-strong rounded-2xl p-4 text-center hover:scale-105 transition-transform cursor-pointer block">
-                <div class="text-4xl mb-1">{{ p.avatar_emoji }}</div>
+               class="player-card glass-strong rounded-2xl p-4 text-center cursor-pointer block slide-up"
+               style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                <div class="text-4xl mb-1" style="animation: floatAround 3s ease-in-out infinite {{ loop.index0 * 0.5 }}s;">{{ p.avatar_emoji }}</div>
                 <div class="font-bold text-gray-800">{{ p.name }}</div>
                 <div class="text-sm text-gray-500">Level {{ p.current_level }} · 🔥 {{ p.streak }}</div>
             </a>
@@ -27,7 +28,7 @@
     {% endif %}
 
     <!-- Neuer Spieler -->
-    <div class="w-full max-w-md slide-up">
+    <div class="w-full max-w-md slide-up" style="animation-delay: 0.2s;">
         <div class="glass rounded-2xl p-6">
             <h2 class="text-white font-bold text-lg mb-4 text-center">
                 {% if players %}Oder neuen Spieler erstellen{% else %}Neuen Spieler erstellen{% endif %}
@@ -39,7 +40,8 @@
                     <input type="text" name="name" required placeholder="Dein Name"
                            class="w-full rounded-xl px-4 py-3 text-lg font-semibold text-gray-800
                                   border-2 border-transparent focus:border-fox-400 focus:outline-none
-                                  placeholder-gray-400"
+                                  placeholder-gray-400 transition-all duration-300
+                                  focus:shadow-lg focus:shadow-fox-200/50"
                            maxlength="20">
                 </div>
 
@@ -51,9 +53,10 @@
                         <label class="cursor-pointer">
                             <input type="radio" name="avatar" value="{{ emoji }}"
                                    class="hidden peer" {% if loop.first %}checked{% endif %}>
-                            <div class="text-2xl text-center p-1 rounded-lg
+                            <div class="text-2xl text-center p-1 rounded-lg transition-all duration-200
                                         peer-checked:bg-white/30 peer-checked:ring-2 peer-checked:ring-fox-400
-                                        hover:bg-white/20 transition">
+                                        peer-checked:scale-110
+                                        hover:bg-white/20 hover:scale-110 active:scale-90">
                                 {{ emoji }}
                             </div>
                         </label>
@@ -63,10 +66,13 @@
 
                 <!-- Submit -->
                 <button type="submit"
-                        class="w-full bg-fox-500 hover:bg-fox-600 text-white font-bold text-lg
-                               py-3 rounded-xl shadow-lg hover:shadow-xl transition
-                               active:scale-95">
-                    Los geht's! 🚀
+                        class="w-full bg-gradient-to-r from-fox-500 to-fox-600 hover:from-fox-600 hover:to-fox-500
+                               text-white font-bold text-lg py-3 rounded-xl shadow-lg
+                               hover:shadow-xl hover:shadow-fox-500/30 transition-all duration-300
+                               active:scale-95 relative overflow-hidden group">
+                    <span class="relative z-10">Los geht's! 🚀</span>
+                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent
+                                -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                 </button>
             </form>
         </div>

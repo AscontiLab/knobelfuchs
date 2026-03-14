@@ -4,24 +4,37 @@
 
     <!-- Header -->
     <header class="glass p-3 flex items-center justify-between sticky top-0 z-40">
-        <a href="/" class="flex items-center gap-2 text-white">
-            <span class="text-2xl">🦊</span>
+        <a href="/" class="flex items-center gap-2 text-white group">
+            <span class="text-2xl transition-transform duration-300 group-hover:rotate-12">🦊</span>
             <span class="font-bold hidden sm:inline">KnobelFuchs</span>
         </a>
 
         <div class="flex items-center gap-3">
             <!-- Streak -->
             <div class="glass rounded-full px-3 py-1 text-white font-bold text-sm flex items-center gap-1"
-                 :class="streak > 0 ? 'pulse-glow' : ''">
+                 :class="[streak > 0 ? 'pulse-glow' : '', streakAnimating ? 'streak-fire' : '']"
+                 @animationend="streakAnimating = false">
                 🔥 <span x-text="streak"></span>
             </div>
             <!-- Level -->
-            <div class="glass rounded-full px-3 py-1 text-white font-bold text-sm">
+            <div class="glass rounded-full px-3 py-1 text-white font-bold text-sm"
+                 :class="levelAnimating ? 'wiggle' : ''"
+                 @animationend="levelAnimating = false">
                 ⭐ Level <span x-text="level"></span>
             </div>
+            <!-- Timer -->
+            <div class="glass rounded-full w-9 h-9 flex items-center justify-center" x-show="!showResult && !loading">
+                <svg class="w-7 h-7 -rotate-90" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="3"/>
+                    <circle cx="18" cy="18" r="15" fill="none" stroke="white" stroke-width="3"
+                            stroke-dasharray="94.25" class="timer-ring"
+                            :stroke-dashoffset="94.25 - (Math.min(timerSeconds / 60, 1) * 94.25)"
+                            stroke-linecap="round"/>
+                </svg>
+            </div>
             <!-- Avatar + Name -->
-            <a href="/dashboard/{{ player.id }}" class="flex items-center gap-1 text-white">
-                <span class="text-2xl">{{ player.avatar_emoji }}</span>
+            <a href="/dashboard/{{ player.id }}" class="flex items-center gap-1 text-white group">
+                <span class="text-2xl transition-transform duration-300 group-hover:scale-110">{{ player.avatar_emoji }}</span>
                 <span class="font-semibold hidden sm:inline">{{ player.name }}</span>
             </a>
         </div>
@@ -32,18 +45,29 @@
         <div class="w-full max-w-lg">
 
             <!-- Loading -->
-            <div x-show="loading" x-cloak class="text-center">
-                <div class="text-6xl mb-4 animate-bounce">🦊</div>
-                <p class="text-white text-xl font-bold">Neues Raetsel wird geladen...</p>
+            <div x-show="loading" x-cloak class="text-center fade-in">
+                <div class="text-6xl mb-4" style="animation: floatAround 2s ease-in-out infinite;">🦊</div>
+                <div class="flex items-center justify-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-white/60 animate-bounce" style="animation-delay: 0s;"></div>
+                    <div class="w-3 h-3 rounded-full bg-white/60 animate-bounce" style="animation-delay: 0.15s;"></div>
+                    <div class="w-3 h-3 rounded-full bg-white/60 animate-bounce" style="animation-delay: 0.3s;"></div>
+                </div>
             </div>
 
             <!-- Puzzle Card -->
-            <div x-show="!loading && !showResult" x-cloak class="slide-up">
-                <div class="glass-strong rounded-3xl p-6 shadow-2xl">
+            <div x-show="!loading && !showResult" x-cloak
+                 :class="cardEntering ? 'card-enter' : ''"
+                 @animationend="cardEntering = false">
+                <div class="glass-strong rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+
+                    <!-- Puzzle-Nummer Zaehler -->
+                    <div class="absolute top-3 right-3 w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span class="text-xs font-bold text-purple-600" x-text="puzzleCount"></span>
+                    </div>
 
                     <!-- Typ-Badge -->
                     <div class="flex items-center justify-between mb-4">
-                        <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold">
+                        <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold pop-in">
                             <span x-text="puzzleEmoji"></span>
                             <span x-text="puzzleTypeLabel"></span>
                         </span>
@@ -52,24 +76,27 @@
 
                     <!-- Frage -->
                     <div class="text-center mb-6">
-                        <p class="text-xl font-bold text-gray-800 leading-relaxed whitespace-pre-line"
+                        <p class="text-xl font-bold text-gray-800 leading-relaxed whitespace-pre-line fade-in"
                            x-text="question"></p>
                     </div>
 
                     <!-- Optionen -->
                     <div class="space-y-3">
                         <template x-for="(option, idx) in options" :key="idx">
-                            <button @click="selectAnswer(option)"
-                                    class="btn-option w-full text-left px-5 py-4 rounded-2xl font-semibold text-lg
-                                           border-2 transition-all"
-                                    :class="selectedAnswer === option
-                                        ? 'bg-fox-100 border-fox-400 text-fox-700'
-                                        : 'bg-white border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50'"
+                            <button @click="selectAnswer(option, $event)"
+                                    class="btn-option option-enter w-full text-left px-5 py-4 rounded-2xl font-semibold text-lg
+                                           border-2"
+                                    :class="[
+                                        answered && option === correctAnswer ? 'option-correct' : '',
+                                        answered && option === selectedAnswer && option !== correctAnswer ? 'option-wrong' : '',
+                                        !answered && selectedAnswer === option ? 'bg-fox-100 border-fox-400 text-fox-700 glow-orange' : '',
+                                        !answered && selectedAnswer !== option ? 'bg-white border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50' : '',
+                                    ]"
                                     :disabled="answered">
                                 <span class="inline-flex items-center gap-3">
-                                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all duration-300"
                                           :class="selectedAnswer === option
-                                              ? 'bg-fox-400 text-white'
+                                              ? 'bg-fox-400 text-white scale-110'
                                               : 'bg-gray-100 text-gray-500'"
                                           x-text="['A','B','C','D'][idx]"></span>
                                     <span x-text="option"></span>
@@ -82,20 +109,24 @@
                     <div class="flex gap-3 mt-6">
                         <button @click="getHint()"
                                 class="flex-1 py-3 rounded-xl font-bold text-purple-600 bg-purple-50
-                                       border-2 border-purple-200 hover:bg-purple-100 transition
-                                       active:scale-95"
+                                       border-2 border-purple-200 hover:bg-purple-100
+                                       transition-all duration-300 active:scale-95
+                                       hover:shadow-md hover:shadow-purple-200/50"
                                 :disabled="hintShown || answered"
                                 :class="hintShown ? 'opacity-50 cursor-not-allowed' : ''">
                             💡 Hinweis
                         </button>
                         <button @click="submitAnswer()"
                                 class="flex-1 py-3 rounded-xl font-bold text-white
-                                       shadow-lg transition active:scale-95"
+                                       shadow-lg transition-all duration-300 active:scale-95
+                                       relative overflow-hidden group"
                                 :class="selectedAnswer
-                                    ? 'bg-fox-500 hover:bg-fox-600 hover:shadow-xl'
+                                    ? 'bg-gradient-to-r from-fox-500 to-fox-600 hover:shadow-xl hover:shadow-fox-300/50'
                                     : 'bg-gray-300 cursor-not-allowed'"
                                 :disabled="!selectedAnswer || answered">
-                            Pruefen ✓
+                            <span class="relative z-10">Pruefen ✓</span>
+                            <div x-show="selectedAnswer" class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent
+                                        -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
                         </button>
                     </div>
 
@@ -109,33 +140,45 @@
 
             <!-- Ergebnis -->
             <div x-show="showResult" x-cloak class="text-center">
-                <div class="glass-strong rounded-3xl p-8 shadow-2xl" :class="isCorrect ? 'bounce-in' : 'shake'">
+                <div class="glass-strong rounded-3xl p-8 shadow-2xl relative overflow-hidden"
+                     :class="isCorrect ? 'bounce-in' : 'shake'">
+
+                    <!-- Funkelnde Sterne bei richtig -->
+                    <template x-if="isCorrect">
+                        <div>
+                            <div class="absolute top-4 left-6 text-2xl sparkle" style="animation-delay: 0.1s;">✨</div>
+                            <div class="absolute top-8 right-8 text-xl sparkle" style="animation-delay: 0.3s;">⭐</div>
+                            <div class="absolute bottom-12 left-10 text-lg sparkle" style="animation-delay: 0.5s;">✨</div>
+                            <div class="absolute top-16 left-20 text-xl sparkle" style="animation-delay: 0.7s;">🌟</div>
+                            <div class="absolute bottom-20 right-12 text-2xl sparkle" style="animation-delay: 0.2s;">✨</div>
+                        </div>
+                    </template>
 
                     <!-- Emoji-Feedback -->
-                    <div class="text-7xl mb-4" x-text="isCorrect ? '🎉' : '💪'"></div>
+                    <div class="text-7xl mb-4 result-emoji" x-text="isCorrect ? '🎉' : '💪'"></div>
 
                     <!-- Nachricht -->
-                    <p class="text-2xl font-black mb-2"
+                    <p class="text-2xl font-black mb-2 fade-in"
                        :class="isCorrect ? 'text-green-600' : 'text-orange-600'"
                        x-text="resultMessage"></p>
 
                     <!-- Richtige Antwort (bei falsch) -->
-                    <div x-show="!isCorrect" class="mb-4">
+                    <div x-show="!isCorrect" class="mb-4 slide-up">
                         <p class="text-gray-500 text-sm">Die richtige Antwort war:</p>
                         <p class="text-lg font-bold text-gray-800" x-text="correctAnswer"></p>
                     </div>
 
                     <!-- Stats -->
                     <div class="flex justify-center gap-6 mb-6 text-sm">
-                        <div class="text-center">
+                        <div class="text-center pop-in" style="animation-delay: 0.1s;">
                             <div class="text-2xl font-black text-purple-600" x-text="totalSolved"></div>
                             <div class="text-gray-500">Geloest</div>
                         </div>
-                        <div class="text-center">
+                        <div class="text-center pop-in" style="animation-delay: 0.2s;">
                             <div class="text-2xl font-black text-fox-500" x-text="'🔥 ' + streak"></div>
                             <div class="text-gray-500">Serie</div>
                         </div>
-                        <div class="text-center">
+                        <div class="text-center pop-in" style="animation-delay: 0.3s;">
                             <div class="text-2xl font-black text-blue-500"
                                  :class="levelChanged ? 'level-up-flash' : ''"
                                  x-text="'⭐ ' + level"></div>
@@ -145,21 +188,41 @@
 
                     <!-- Level-Up Nachricht -->
                     <div x-show="levelChanged && levelDirection === 'up'" x-cloak
-                         class="bg-gradient-to-r from-fox-100 to-yellow-100 rounded-xl p-3 mb-4 bounce-in">
-                        <p class="font-bold text-fox-700">🌟 Level Up! Du bist jetzt Level <span x-text="level"></span>!</p>
+                         class="bg-gradient-to-r from-fox-100 via-yellow-100 to-fox-100 rounded-xl p-4 mb-4 level-up-banner
+                                border-2 border-fox-300">
+                        <p class="font-black text-fox-700 text-lg">
+                            🌟 Level Up! 🌟
+                        </p>
+                        <p class="text-fox-600 font-semibold">
+                            Du bist jetzt Level <span x-text="level"></span>!
+                        </p>
+                    </div>
+
+                    <!-- Streak-Meilenstein -->
+                    <div x-show="streak > 0 && streak % 5 === 0" x-cloak
+                         class="bg-gradient-to-r from-red-100 to-orange-100 rounded-xl p-3 mb-4 bounce-in
+                                border-2 border-orange-300">
+                        <p class="font-bold text-orange-700">
+                            🔥 <span x-text="streak"></span>er Serie! Unaufhaltsam!
+                        </p>
                     </div>
 
                     <!-- Naechstes Raetsel -->
                     <button @click="loadPuzzle()"
                             class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white
                                    font-bold text-lg py-4 rounded-2xl shadow-lg
-                                   hover:shadow-xl transition active:scale-95">
-                        Naechstes Raetsel →
+                                   hover:shadow-xl hover:shadow-purple-300/50
+                                   transition-all duration-300 active:scale-95
+                                   relative overflow-hidden group">
+                        <span class="relative z-10">Naechstes Raetsel →</span>
+                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent
+                                    -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
                     </button>
 
                     <!-- Dashboard Link -->
                     <a href="/dashboard/{{ player.id }}"
-                       class="block mt-3 text-purple-300 hover:text-white font-semibold text-sm transition">
+                       class="block mt-3 text-gray-400 hover:text-purple-600 font-semibold text-sm
+                              transition-all duration-300 hover:tracking-wide">
                         📊 Zum Dashboard
                     </a>
                 </div>
@@ -188,6 +251,8 @@ function puzzleGame() {
         hintShown: false,
         hintText: '',
         hintUsed: false,
+        cardEntering: false,
+        puzzleCount: 0,
 
         // Ergebnis
         showResult: false,
@@ -202,8 +267,14 @@ function puzzleGame() {
         levelChanged: false,
         levelDirection: '',
 
+        // Animationen
+        streakAnimating: false,
+        levelAnimating: false,
+
         // Timer
         startTime: null,
+        timerSeconds: 0,
+        timerInterval: null,
 
         get puzzleTypeLabel() {
             const labels = {
@@ -216,6 +287,21 @@ function puzzleGame() {
             return labels[this.puzzleType] || this.puzzleType;
         },
 
+        startTimer() {
+            this.timerSeconds = 0;
+            if (this.timerInterval) clearInterval(this.timerInterval);
+            this.timerInterval = setInterval(() => {
+                this.timerSeconds++;
+            }, 1000);
+        },
+
+        stopTimer() {
+            if (this.timerInterval) {
+                clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            }
+        },
+
         async loadPuzzle() {
             this.loading = true;
             this.showResult = false;
@@ -225,6 +311,8 @@ function puzzleGame() {
             this.hintText = '';
             this.hintUsed = false;
             this.levelChanged = false;
+            this.cardEntering = true;
+            this.stopTimer();
 
             try {
                 const res = await fetch('/api/puzzle/{{ player.id }}');
@@ -238,6 +326,8 @@ function puzzleGame() {
                 this.level = data.player_level;
                 this.streak = data.streak;
                 this.startTime = Date.now();
+                this.puzzleCount++;
+                this.startTimer();
             } catch (e) {
                 this.question = 'Fehler beim Laden. Versuche es nochmal!';
                 this.options = [];
@@ -246,15 +336,20 @@ function puzzleGame() {
             this.loading = false;
         },
 
-        selectAnswer(option) {
-            if (!this.answered) {
-                this.selectedAnswer = option;
+        selectAnswer(option, event) {
+            if (this.answered) return;
+            this.selectedAnswer = option;
+            // Haptic-artiges Feedback via kurze Animation
+            if (event && event.currentTarget) {
+                event.currentTarget.style.setProperty('--tap-x', (event.offsetX / event.currentTarget.offsetWidth * 100) + '%');
+                event.currentTarget.style.setProperty('--tap-y', (event.offsetY / event.currentTarget.offsetHeight * 100) + '%');
             }
         },
 
         async submitAnswer() {
             if (!this.selectedAnswer || this.answered) return;
             this.answered = true;
+            this.stopTimer();
 
             const timeSeconds = (Date.now() - this.startTime) / 1000;
 
@@ -273,6 +368,11 @@ function puzzleGame() {
                 this.isCorrect = data.is_correct;
                 this.resultMessage = data.message;
                 this.correctAnswer = data.correct_answer;
+
+                // Streak-Animation
+                if (data.is_correct && data.streak > this.streak) {
+                    this.streakAnimating = true;
+                }
                 this.streak = data.streak;
                 this.totalSolved = data.total_solved;
 
@@ -280,8 +380,12 @@ function puzzleGame() {
                 if (data.level_change && data.level_change.direction !== 'stay') {
                     this.levelChanged = true;
                     this.levelDirection = data.level_change.direction;
+                    this.levelAnimating = true;
                 }
                 this.level = data.level;
+
+                // Kurze Pause um Richtig/Falsch auf den Buttons zu zeigen, dann Ergebnis
+                await new Promise(r => setTimeout(r, 600));
 
                 // Konfetti bei richtiger Antwort
                 if (this.isCorrect) {
