@@ -57,7 +57,11 @@ class WordPuzzle(PuzzleGenerator):
     emoji = "📝"
 
     def generate(self, level: int, db=None) -> PuzzleData:
-        generators = [self._scramble, self._missing_vowels, self._compound]
+        if level <= 10:
+            generators = [self._scramble, self._missing_vowels, self._compound]
+        else:
+            generators = [self._scramble, self._missing_vowels, self._compound,
+                          self._synonym, self._proverb]
         gen = random.choice(generators)
         return gen(level)
 
@@ -141,7 +145,6 @@ class WordPuzzle(PuzzleGenerator):
 
         question = f"Welches Wort entsteht, wenn du diese zwei Teile zusammensetzt?\n\n🧩 {part1} + {part2} = ?"
 
-        # Falsche Optionen
         wrong_compounds = [c[2] for c in COMPOUND_WORDS if c[2] != compound]
         random.shuffle(wrong_compounds)
         wrong = wrong_compounds[:3]
@@ -157,6 +160,66 @@ class WordPuzzle(PuzzleGenerator):
             options=options,
             correct_answer=compound,
             hint=f"Setze '{part1}' und '{part2}' direkt hintereinander!",
+            difficulty=level,
+            emoji=self.emoji,
+        )
+
+    def _synonym(self, level: int) -> PuzzleData:
+        """Synonyme finden — Level 11+."""
+        pairs = [
+            ("gross", "riesig", ["riesig", "winzig", "langsam", "leise"]),
+            ("schnell", "flink", ["flink", "traege", "laut", "schwer"]),
+            ("klug", "schlau", ["schlau", "dumm", "mutig", "faul"]),
+            ("huebsch", "schoen", ["schoen", "haesslich", "lang", "rund"]),
+            ("wuetend", "zornig", ["zornig", "froh", "muede", "hungrig"]),
+            ("mutig", "tapfer", ["tapfer", "feige", "frech", "leise"]),
+            ("lustig", "witzig", ["witzig", "traurig", "ernst", "streng"]),
+            ("beginnen", "anfangen", ["anfangen", "aufhoeren", "vergessen", "schlafen"]),
+            ("kaputt", "defekt", ["defekt", "neu", "sauber", "leer"]),
+            ("reden", "sprechen", ["sprechen", "schweigen", "singen", "lachen"]),
+            ("Angst", "Furcht", ["Furcht", "Freude", "Stolz", "Neid"]),
+            ("Freund", "Kamerad", ["Kamerad", "Feind", "Nachbar", "Lehrer"]),
+        ]
+
+        word, answer, options = random.choice(pairs)
+        random.shuffle(options)
+
+        return PuzzleData(
+            type="word",
+            question=f"Welches Wort bedeutet fast das Gleiche wie:\n\n📖 {word}",
+            options=options,
+            correct_answer=answer,
+            hint="Ueberlege, welches Wort eine aehnliche Bedeutung hat!",
+            difficulty=level,
+            emoji=self.emoji,
+        )
+
+    def _proverb(self, level: int) -> PuzzleData:
+        """Sprichwoerter vervollstaendigen — Level 11+."""
+        proverbs = [
+            ("Uebung macht den ...", "Meister", ["Meister", "Anfang", "Spass", "Fehler"]),
+            ("Wer zuletzt lacht, lacht am ...", "besten", ["besten", "lautesten", "laengsten", "meisten"]),
+            ("Der Apfel faellt nicht weit vom ...", "Stamm", ["Stamm", "Baum", "Haus", "Weg"]),
+            ("Morgenstund hat ... im Mund", "Gold", ["Gold", "Silber", "Brot", "Honig"]),
+            ("Ohne Fleiss kein ...", "Preis", ["Preis", "Geld", "Spass", "Essen"]),
+            ("Aller Anfang ist ...", "schwer", ["schwer", "leicht", "schoen", "wichtig"]),
+            ("Viele Koecke verderben den ...", "Brei", ["Brei", "Kuchen", "Spass", "Koch"]),
+            ("Wer anderen eine Grube graebt, faellt selbst ...", "hinein", ["hinein", "hinaus", "daneben", "herunter"]),
+            ("Luegennie haben kurze ...", "Beine", ["Beine", "Arme", "Nasen", "Ohren"]),
+            ("Stille Wasser sind ...", "tief", ["tief", "kalt", "klar", "schoen"]),
+            ("In der Kuerze liegt die ...", "Wuerze", ["Wuerze", "Kraft", "Wahrheit", "Schoenheit"]),
+            ("Hochmut kommt vor dem ...", "Fall", ["Fall", "Sieg", "Stolz", "Glueck"]),
+        ]
+
+        question_text, answer, options = random.choice(proverbs)
+        random.shuffle(options)
+
+        return PuzzleData(
+            type="word",
+            question=f"Wie endet das Sprichwort?\n\n💬 {question_text}",
+            options=options,
+            correct_answer=answer,
+            hint="Das ist ein bekanntes deutsches Sprichwort!",
             difficulty=level,
             emoji=self.emoji,
         )

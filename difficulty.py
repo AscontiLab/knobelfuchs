@@ -28,7 +28,7 @@ def update_difficulty(db: Session, player: Player) -> dict:
 
     correct_rate = sum(1 for a in recent if a.is_correct) / len(recent)
 
-    if correct_rate >= PROMOTE_THRESHOLD and player.current_level < 10:
+    if correct_rate >= PROMOTE_THRESHOLD and player.current_level < 20:
         player.current_level += 1
         db.commit()
         return {"old_level": old_level, "new_level": player.current_level, "direction": "up"}
