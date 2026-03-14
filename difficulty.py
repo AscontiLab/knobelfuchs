@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from game_settings import MAX_GAME_LEVEL, MIN_GAME_LEVEL
 from models import PuzzleAttempt, Player
 
 WINDOW_SIZE = 8
@@ -28,11 +29,11 @@ def update_difficulty(db: Session, player: Player) -> dict:
 
     correct_rate = sum(1 for a in recent if a.is_correct) / len(recent)
 
-    if correct_rate >= PROMOTE_THRESHOLD and player.current_level < 20:
+    if correct_rate >= PROMOTE_THRESHOLD and player.current_level < MAX_GAME_LEVEL:
         player.current_level += 1
         db.commit()
         return {"old_level": old_level, "new_level": player.current_level, "direction": "up"}
-    elif correct_rate <= DEMOTE_THRESHOLD and player.current_level > 1:
+    elif correct_rate <= DEMOTE_THRESHOLD and player.current_level > MIN_GAME_LEVEL:
         player.current_level -= 1
         db.commit()
         return {"old_level": old_level, "new_level": player.current_level, "direction": "down"}

@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from database import get_db
+from game_settings import MIN_GAME_LEVEL
 from models import Player
 
 router = APIRouter()
@@ -36,7 +37,7 @@ async def create_player(
     if existing:
         return RedirectResponse(url=f"/play/{existing.id}", status_code=303)
 
-    player = Player(name=name, avatar_emoji=avatar)
+    player = Player(name=name, avatar_emoji=avatar, current_level=MIN_GAME_LEVEL)
     db.add(player)
     db.commit()
     db.refresh(player)

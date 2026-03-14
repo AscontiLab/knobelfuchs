@@ -37,8 +37,11 @@ async def dashboard(request: Request, player_id: int, db: Session = Depends(get_
         t["rate"] = round(t["correct"] / t["total"] * 100) if t["total"] > 0 else 0
 
     type_labels = {
-        "math": ("Mathe", "🔢"),
-        "logic": ("Logik", "🧩"),
+        "math": ("Zahlenlogik", "IQ"),
+        "logic": ("Logik", "IQ"),
+        "sequence": ("Knobeltest", "IQ"),
+        "deduction": ("Logiktest", "IQ"),
+        "matrix": ("Matrixtest", "IQ"),
         "word": ("Woerter", "📝"),
         "emoji": ("Emoji", "😎"),
         "riddle": ("Raetsel", "🤔"),

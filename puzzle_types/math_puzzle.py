@@ -1,200 +1,183 @@
 import random
-from .base import PuzzleGenerator, PuzzleData
+
+from .base import PuzzleData, PuzzleGenerator
 
 
 class MathPuzzle(PuzzleGenerator):
     type_name = "math"
-    emoji = "🔢"
+    emoji = "IQ"
 
     def generate(self, level: int, db=None) -> PuzzleData:
-        if level <= 3:
-            return self._addition_subtraction(level)
-        elif level <= 6:
-            return self._multiplication(level)
-        elif level <= 10:
-            return self._mixed_operations(level)
-        elif level <= 15:
-            return self._hard_mixed(level)
-        else:
-            return self._chain_operations(level)
-
-    def _addition_subtraction(self, level: int) -> PuzzleData:
-        max_val = 10 + level * 10
-        a = random.randint(1, max_val)
-        b = random.randint(1, max_val)
-
-        if random.choice([True, False]):
-            question = f"{a} + {b} = ?"
-            answer = a + b
-            hint = "Zaehle beide Zahlen zusammen!"
-        else:
-            if a < b:
-                a, b = b, a
-            question = f"{a} - {b} = ?"
-            answer = a - b
-            hint = "Ziehe die kleinere Zahl von der groesseren ab!"
-
-        return self._make_puzzle(question, answer, hint, level)
-
-    def _multiplication(self, level: int) -> PuzzleData:
-        max_factor = min(level + 2, 12)
-        a = random.randint(2, max_factor)
-        b = random.randint(2, max_factor)
-
-        if random.choice([True, False]):
-            question = f"{a} × {b} = ?"
-            answer = a * b
-            hint = f"Zaehle {a} mal die Zahl {b} zusammen!"
-        else:
-            product = a * b
-            question = f"{product} ÷ {a} = ?"
-            answer = b
-            hint = f"Wie oft passt {a} in {product}?"
-
-        return self._make_puzzle(question, answer, hint, level)
-
-    def _mixed_operations(self, level: int) -> PuzzleData:
-        max_val = level * 5
-        a = random.randint(2, max_val)
-        b = random.randint(2, 10)
-        c = random.randint(1, 10)
-
-        patterns = [
-            (f"{a} + {b} × {c} = ?", a + b * c, "Denke daran: Punkt vor Strich!"),
-            (f"{b} × {c} + {a} = ?", b * c + a, "Erst multiplizieren, dann addieren!"),
-            (f"{a} - {b} × {c} = ?", a - b * c, "Erst mal rechnen, dann minus!"),
+        generators = [
+            self._equation_balance,
+            self._number_grid,
+            self._reverse_operation,
+            self._operator_logic,
         ]
+        if level >= 10:
+            generators.append(self._hidden_rule)
+        return random.choice(generators)(level)
 
-        question, answer, hint = random.choice(patterns)
-        if answer < 0:
-            question = f"{a} + {b} × {c} = ?"
-            answer = a + b * c
-            hint = "Denke daran: Punkt vor Strich!"
+    def _equation_balance(self, level: int) -> PuzzleData:
+        a = random.randint(3, 9)
+        b = random.randint(2, 8)
+        total = a + b
+        answer = a
 
-        return self._make_puzzle(question, answer, hint, level)
+        question = (
+            f"Eine Gleichung lautet:\n"
+            f"? + {b} = {total}\n\n"
+            "Welche Zahl fehlt?"
+        )
 
-    def _hard_mixed(self, level: int) -> PuzzleData:
-        """Schwierigere Grundrechenarten — Level 11-15.
-        Groessere Zahlen, mehr Operationen, Klammern."""
-        variant = random.choice(["big_multiply", "brackets", "three_ops", "reverse"])
+        return self._build_numeric(
+            question=question,
+            answer=answer,
+            level=max(level, 6),
+            hint="Welche Zahl musst du zu 2 addieren, um rechts herauszukommen?",
+            explanation=f"Gesucht ist die Zahl, die zusammen mit {b} die {total} ergibt. Also rechnet man {total} - {b} = {answer}.",
+            reasoning_type="equation_balance",
+        )
 
-        if variant == "big_multiply":
-            # Grosse Multiplikation
-            a = random.randint(11, 15 + level)
-            b = random.randint(3, 9 + level - 10)
-            answer = a * b
-            question = f"{a} × {b} = ?"
-            hint = f"Zerlege: {a} = {a - a % 10} + {a % 10}, dann getrennt rechnen!"
+    def _number_grid(self, level: int) -> PuzzleData:
+        start = random.randint(2, 6)
+        step = random.randint(2, 4)
+        row1 = [start, start + step, start + 2 * step]
+        row2 = [start + 3 * step, start + 4 * step, "?"]
+        answer = start + 5 * step
 
-        elif variant == "brackets":
-            # Klammer-Ausdruecke
-            a = random.randint(2, 10 + level)
-            b = random.randint(1, 8)
-            c = random.randint(2, 6)
-            answer = (a + b) * c
-            question = f"({a} + {b}) × {c} = ?"
-            hint = f"Erst die Klammer: {a} + {b} = {a + b}, dann mal {c}!"
+        question = (
+            "Welche Zahl fehlt im Zahlenfeld?\n\n"
+            f"{row1[0]}   {row1[1]}   {row1[2]}\n"
+            f"{row2[0]}   {row2[1]}   {row2[2]}"
+        )
 
-        elif variant == "three_ops":
-            # Drei Operationen
-            a = random.randint(5, 15 + level)
-            b = random.randint(2, 8)
-            c = random.randint(2, 6)
-            d = random.randint(1, 10)
-            answer = a + b * c - d
-            if answer < 0:
-                answer = a + b * c + d
-                question = f"{a} + {b} × {c} + {d} = ?"
-                hint = f"Punkt vor Strich! Erst {b} × {c}, dann alles addieren!"
-            else:
-                question = f"{a} + {b} × {c} - {d} = ?"
-                hint = f"Punkt vor Strich! Erst {b} × {c} = {b * c}, dann + {a} - {d}!"
+        return self._build_numeric(
+            question=question,
+            answer=answer,
+            level=max(level, 7),
+            hint="Lies die Zahlen wie eine fortlaufende Reihe von links nach rechts.",
+            explanation=(
+                f"Die Zahlen steigen immer um {step}. "
+                f"Nach {row2[1]} folgt deshalb {answer}."
+            ),
+            reasoning_type="number_grid",
+        )
 
-        else:
-            # Rueckwaerts: ? × b = c
-            b = random.randint(3, 9 + level - 10)
-            answer = random.randint(3, 12)
-            product = answer * b
-            question = f"? × {b} = {product}"
-            hint = f"Teile {product} durch {b}!"
+    def _reverse_operation(self, level: int) -> PuzzleData:
+        start = random.randint(4, 12)
+        step1 = random.randint(2, 5)
+        step2 = random.randint(2, 4)
+        result = (start * step2) + step1
 
-        return self._make_puzzle(question, answer, hint, level)
+        question = (
+            "Eine Zahl wird zuerst malgenommen und dann erhoeht:\n"
+            f"Schritt 1: × {step2}\n"
+            f"Schritt 2: + {step1}\n"
+            f"Ergebnis: {result}\n\n"
+            "Welche Startzahl wurde verwendet?"
+        )
 
-    def _chain_operations(self, level: int) -> PuzzleData:
-        """Kettenaufgaben und knifflige Rechnungen — Level 16-20."""
-        variant = random.choice(["chain", "big_brackets", "double_reverse", "estimate"])
+        return self._build_numeric(
+            question=question,
+            answer=start,
+            level=max(level, 8),
+            hint="Rechne die Schritte rueckwaerts.",
+            explanation=(
+                f"Rueckwaerts rechnet man zuerst {result} - {step1} = {result - step1}. "
+                f"Danach teilt man durch {step2}: {(result - step1)} ÷ {step2} = {start}."
+            ),
+            reasoning_type="reverse_operation",
+        )
 
-        if variant == "chain":
-            # Kettenaufgabe: a × b + c × d
-            a = random.randint(3, 8 + level - 15)
-            b = random.randint(2, 7)
-            c = random.randint(2, 6)
-            d = random.randint(2, 5)
-            answer = a * b + c * d
-            question = f"{a} × {b} + {c} × {d} = ?"
-            hint = f"Zwei Multiplikationen, dann addieren: {a}×{b} = {a*b} und {c}×{d} = {c*d}"
+    def _operator_logic(self, level: int) -> PuzzleData:
+        a = random.randint(2, 6)
+        b = random.randint(3, 7)
+        c = random.randint(1, 4)
+        answer = a * b + c
 
-        elif variant == "big_brackets":
-            # Verschachtelte Klammern
-            a = random.randint(2, 6)
-            b = random.randint(1, 5)
-            c = random.randint(2, 4)
-            d = random.randint(1, 8)
-            answer = (a + b) * c + d
-            question = f"({a} + {b}) × {c} + {d} = ?"
-            hint = f"Klammer zuerst: {a} + {b} = {a+b}, dann × {c} = {(a+b)*c}, dann + {d}"
+        question = (
+            f"Welche Zahl passt?\n"
+            f"{a} × {b} + {c} = ?"
+        )
 
-        elif variant == "double_reverse":
-            # Zwei Unbekannte nacheinander
-            a = random.randint(3, 12)
-            b = random.randint(2, 8)
-            total = a * b
-            c = random.randint(2, 5)
-            answer = total + a * c
-            question = (
-                f"Wenn {a} × {b} = {total},\n"
-                f"was ist dann {a} × {b} + {a} × {c}?"
-            )
-            hint = f"Du weisst: {a} × {b} = {total}. Jetzt noch {a} × {c} = {a*c} dazu!"
+        return self._build_numeric(
+            question=question,
+            answer=answer,
+            level=max(level, 7),
+            hint="Beachte die Reihenfolge der Rechenzeichen.",
+            explanation=(
+                f"Zuerst rechnet man {a} × {b} = {a * b}. "
+                f"Danach kommt + {c}, also ist das Ergebnis {answer}."
+            ),
+            reasoning_type="operator_precedence",
+        )
 
-        else:
-            # Schaetzaufgabe: Was kommt am naechsten?
-            a = random.randint(11, 25)
-            b = random.randint(11, 25)
-            answer = a * b
-            question = f"{a} × {b} = ?"
-            # Tipp: Zerlegen
-            a_round = (a // 10) * 10
-            hint = f"Zerlege: {a} × {b} = {a_round} × {b} + {a - a_round} × {b}"
+    def _hidden_rule(self, level: int) -> PuzzleData:
+        x = random.randint(2, 5)
+        y = random.randint(3, 6)
+        left = x + y
+        right = x * y
+        candidate = random.randint(4, 7)
+        answer = candidate * x
 
-        return self._make_puzzle(question, answer, hint, level)
+        question = (
+            "Finde die versteckte Regel:\n"
+            f"{x} und {y} ergeben {left} und {right}.\n"
+            "Die erste Zielzahl ist die Summe, die zweite das Produkt.\n\n"
+            f"{candidate} und {x} ergeben {candidate + x} und ... ?"
+        )
 
-    def _make_puzzle(self, question: str, answer: int, hint: str, level: int) -> PuzzleData:
-        options = self._generate_options(answer, level)
+        return self._build_numeric(
+            question=question,
+            answer=answer,
+            level=max(level, 10),
+            hint="Uebertrage die beobachtete Regel auf das zweite Zahlenpaar.",
+            explanation=(
+                f"Beim ersten Paar ist die erste Zahl die Summe ({x}+{y}={left}) "
+                f"und die zweite Zahl das Produkt ({x}×{y}={right}). "
+                f"Beim zweiten Paar lautet das Produkt {candidate}×{x}={answer}."
+            ),
+            reasoning_type="rule_transfer",
+        )
+
+    def _build_numeric(
+        self,
+        question: str,
+        answer: int,
+        level: int,
+        hint: str,
+        explanation: str,
+        reasoning_type: str,
+    ) -> PuzzleData:
+        options = self._generate_options(answer)
         return PuzzleData(
-            type="math",
+            type=self.type_name,
             question=question,
             options=options,
             correct_answer=str(answer),
             hint=hint,
             difficulty=level,
             emoji=self.emoji,
+            explanation=explanation,
+            reasoning_type=reasoning_type,
+            quality_score=5,
         )
 
-    def _generate_options(self, correct: int, level: int) -> list[str]:
-        spread = max(3, level * 2)
-        wrong = set()
-        attempts = 0
-        while len(wrong) < 3 and attempts < 50:
-            offset = random.randint(1, spread)
-            val = correct + random.choice([-1, 1]) * offset
-            if val != correct and val >= 0:
-                wrong.add(val)
-            attempts += 1
-
-        while len(wrong) < 3:
-            wrong.add(correct + len(wrong) + 1)
-
-        options = [str(correct)] + [str(w) for w in list(wrong)[:3]]
+    def _generate_options(self, answer: int) -> list[str]:
+        wrong = {
+            answer + 1,
+            answer - 1,
+            answer + 2,
+            answer - 2,
+            answer + random.randint(3, 6),
+        }
+        cleaned = []
+        for val in wrong:
+            if val >= 0 and val != answer and str(val) not in cleaned:
+                cleaned.append(str(val))
+        options = [str(answer)] + cleaned[:3]
+        while len(options) < 4:
+            options.append(str(answer + len(options) + 3))
         random.shuffle(options)
         return options

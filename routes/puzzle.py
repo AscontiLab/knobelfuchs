@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from database import get_db
+from game_settings import MIN_GAME_LEVEL
 from models import Player, PuzzleAttempt
 from difficulty import update_difficulty
 from puzzle_types import get_random_puzzle
@@ -23,6 +24,9 @@ async def play(request: Request, player_id: int, db: Session = Depends(get_db)):
     player = db.get(Player, player_id)
     if not player:
         return HTMLResponse("Spieler nicht gefunden", status_code=404)
+    if player.current_level < MIN_GAME_LEVEL:
+        player.current_level = MIN_GAME_LEVEL
+        db.commit()
     return templates.TemplateResponse("puzzle.html", {
         "request": request,
         "player": player,
@@ -34,6 +38,9 @@ async def get_puzzle(player_id: int, db: Session = Depends(get_db)):
     player = db.get(Player, player_id)
     if not player:
         return JSONResponse({"error": "Spieler nicht gefunden"}, status_code=404)
+    if player.current_level < MIN_GAME_LEVEL:
+        player.current_level = MIN_GAME_LEVEL
+        db.commit()
 
     puzzle = get_random_puzzle(player.current_level, db=db)
     puzzle_dict = puzzle.to_dict()
@@ -48,6 +55,7 @@ async def get_puzzle(player_id: int, db: Session = Depends(get_db)):
         "options": puzzle.options,
         "emoji": puzzle.emoji,
         "difficulty": puzzle.difficulty,
+        "reasoning_type": puzzle.reasoning_type,
         "player_level": player.current_level,
         "streak": player.streak,
     }
@@ -126,6 +134,8 @@ async def check_answer(player_id: int, request: Request, db: Session = Depends(g
     return JSONResponse({
         "is_correct": is_correct,
         "correct_answer": puzzle_data["correct_answer"],
+        "explanation": puzzle_data.get("explanation", ""),
+        "reasoning_type": puzzle_data.get("reasoning_type", "general"),
         "message": message,
         "streak": player.streak,
         "best_streak": player.best_streak,

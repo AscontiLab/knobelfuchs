@@ -195,6 +195,16 @@
                         <p class="text-lg font-bold text-gray-800" x-text="correctAnswer"></p>
                     </div>
 
+                    <div x-show="explanation" x-cloak
+                         class="mb-5 text-left bg-blue-50 border-2 border-blue-100 rounded-2xl p-4 slide-up">
+                        <div class="flex items-center justify-between gap-3 mb-2">
+                            <p class="text-xs font-bold uppercase tracking-wide text-blue-500">So denkst du zur Loesung</p>
+                            <span class="text-xs font-semibold text-blue-700 bg-white/80 px-2 py-1 rounded-full"
+                                  x-text="reasoningTypeLabel"></span>
+                        </div>
+                        <p class="text-sm text-slate-700 leading-relaxed" x-text="explanation"></p>
+                    </div>
+
                     <!-- Stats -->
                     <div class="flex justify-center gap-6 mb-6 text-sm">
                         <div class="text-center pop-in" style="animation-delay: 0.1s;">
@@ -286,6 +296,8 @@ function puzzleGame() {
         isCorrect: false,
         resultMessage: '',
         correctAnswer: '',
+        explanation: '',
+        reasoningType: '',
 
         // Player stats
         level: {{ player.current_level }},
@@ -305,13 +317,43 @@ function puzzleGame() {
 
         get puzzleTypeLabel() {
             const labels = {
-                'math': 'Mathe',
+                'math': 'Zahlenlogik',
                 'logic': 'Logik',
                 'word': 'Woerter',
                 'emoji': 'Emoji',
-                'riddle': 'Raetsel'
+                'riddle': 'Raetsel',
+                'sequence': 'Knobeltest',
+                'deduction': 'Logiktest',
+                'matrix': 'Matrixtest'
             };
             return labels[this.puzzleType] || this.puzzleType;
+        },
+
+        get reasoningTypeLabel() {
+            const labels = {
+                'alternating_sequence': 'Wechselmuster',
+                'second_order_sequence': 'Abstandslogik',
+                'growing_multiplier': 'Multiplikationsmuster',
+                'interleaved_sequence': 'Teilfolgen',
+                'composite_rule': 'Kombinationsregel',
+                'symbol_pattern': 'Symbolmuster',
+                'order_deduction': 'Reihenfolge',
+                'position_deduction': 'Platzlogik',
+                'assignment_deduction': 'Zuordnung',
+                'truth_table': 'Aussagenlogik',
+                'constraint_filter': 'Ausschlusslogik',
+                'equation_balance': 'Gleichungslogik',
+                'number_grid': 'Zahlenfeld',
+                'reverse_operation': 'Rueckwaerts denken',
+                'operator_precedence': 'Operatorlogik',
+                'rule_transfer': 'Regeltransfer',
+                'matrix_count_rule': 'Matrix-Muster',
+                'matrix_rotation': 'Rotation',
+                'matrix_coordinate_rule': 'Zeilen/Spalten-Regel',
+                'matrix_dual_rule': 'Kombinationsmatrix',
+                'general': 'Denkaufgabe'
+            };
+            return labels[this.reasoningType] || 'Denkaufgabe';
         },
 
         startTimer() {
@@ -334,6 +376,8 @@ function puzzleGame() {
             this.showResult = false;
             this.selectedAnswer = null;
             this.correctAnswer = '';
+            this.explanation = '';
+            this.reasoningType = '';
             this.answered = false;
             this.hintShown = false;
             this.hintText = '';
@@ -351,6 +395,7 @@ function puzzleGame() {
                 this.puzzleEmoji = data.emoji;
                 this.puzzleType = data.type;
                 this.difficulty = data.difficulty;
+                this.reasoningType = data.reasoning_type || 'general';
                 this.level = data.player_level;
                 this.streak = data.streak;
                 this.startTime = Date.now();
@@ -396,6 +441,8 @@ function puzzleGame() {
                 this.isCorrect = data.is_correct;
                 this.resultMessage = data.message;
                 this.correctAnswer = data.correct_answer;
+                this.explanation = data.explanation || '';
+                this.reasoningType = data.reasoning_type || this.reasoningType;
 
                 // Streak-Animation
                 if (data.is_correct && data.streak > this.streak) {

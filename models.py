@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, Text, DateTime
 
 from database import Base
+from game_settings import MIN_GAME_LEVEL
 
 
 class Player(Base):
@@ -11,7 +12,7 @@ class Player(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String(50), unique=True, nullable=False)
     avatar_emoji = Column(String(10), default="🦊")
-    current_level = Column(Integer, default=1)
+    current_level = Column(Integer, default=MIN_GAME_LEVEL)
     total_solved = Column(Integer, default=0)
     total_attempts = Column(Integer, default=0)
     streak = Column(Integer, default=0)

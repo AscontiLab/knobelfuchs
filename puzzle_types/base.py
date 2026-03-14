@@ -11,6 +11,9 @@ class PuzzleData:
     hint: str
     difficulty: int
     emoji: str = ""  # Kategorie-Emoji fuer die Anzeige
+    explanation: str = ""
+    reasoning_type: str = "general"
+    quality_score: int = 3
 
     def to_dict(self) -> dict:
         return {
@@ -21,6 +24,9 @@ class PuzzleData:
             "hint": self.hint,
             "difficulty": self.difficulty,
             "emoji": self.emoji,
+            "explanation": self.explanation,
+            "reasoning_type": self.reasoning_type,
+            "quality_score": self.quality_score,
         }
 
 
