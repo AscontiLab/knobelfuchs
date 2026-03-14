@@ -85,21 +85,48 @@
                         <template x-for="(option, idx) in options" :key="idx">
                             <button @click="selectAnswer(option, $event)"
                                     class="btn-option option-enter w-full text-left px-5 py-4 rounded-2xl font-semibold text-lg
-                                           border-2"
+                                           border-2 transition-all duration-200"
                                     :class="[
-                                        answered && option === correctAnswer ? 'option-correct' : '',
-                                        answered && option === selectedAnswer && option !== correctAnswer ? 'option-wrong' : '',
-                                        !answered && selectedAnswer === option ? 'bg-fox-100 border-fox-400 text-fox-700 glow-orange' : '',
-                                        !answered && selectedAnswer !== option ? 'bg-white border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50' : '',
+                                        answered && option === correctAnswer
+                                            ? 'bg-green-100 border-green-400 text-green-800 option-correct'
+                                            : '',
+                                        answered && option === selectedAnswer && option !== correctAnswer
+                                            ? 'bg-red-100 border-red-400 text-red-700 option-wrong'
+                                            : '',
+                                        answered && option !== correctAnswer && option !== selectedAnswer
+                                            ? 'bg-gray-50 border-gray-200 text-gray-400 opacity-50'
+                                            : '',
+                                        !answered && selectedAnswer === option
+                                            ? 'bg-fox-400 border-fox-500 text-white shadow-lg shadow-fox-300/40 scale-[1.02]'
+                                            : '',
+                                        !answered && selectedAnswer !== option
+                                            ? 'bg-white border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50'
+                                            : '',
                                     ]"
                                     :disabled="answered">
-                                <span class="inline-flex items-center gap-3">
-                                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all duration-300"
-                                          :class="selectedAnswer === option
-                                              ? 'bg-fox-400 text-white scale-110'
-                                              : 'bg-gray-100 text-gray-500'"
-                                          x-text="['A','B','C','D'][idx]"></span>
-                                    <span x-text="option"></span>
+                                <span class="inline-flex items-center gap-3 w-full">
+                                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 transition-all duration-200"
+                                          :class="[
+                                              !answered && selectedAnswer === option ? 'bg-white text-fox-500 scale-110' : '',
+                                              !answered && selectedAnswer !== option ? 'bg-gray-100 text-gray-500' : '',
+                                              answered && option === correctAnswer ? 'bg-green-500 text-white' : '',
+                                              answered && option === selectedAnswer && option !== correctAnswer ? 'bg-red-500 text-white' : '',
+                                              answered && option !== correctAnswer && option !== selectedAnswer ? 'bg-gray-100 text-gray-400' : '',
+                                          ]">
+                                        <template x-if="answered && option === correctAnswer">
+                                            <span>✓</span>
+                                        </template>
+                                        <template x-if="answered && option === selectedAnswer && option !== correctAnswer">
+                                            <span>✗</span>
+                                        </template>
+                                        <template x-if="!answered || (option !== correctAnswer && option !== selectedAnswer)">
+                                            <span x-text="['A','B','C','D'][idx]"></span>
+                                        </template>
+                                    </span>
+                                    <span x-text="option" class="flex-1"></span>
+                                    <template x-if="!answered && selectedAnswer === option">
+                                        <span class="text-white/80 text-sm pop-in">ausgewaehlt</span>
+                                    </template>
                                 </span>
                             </button>
                         </template>
