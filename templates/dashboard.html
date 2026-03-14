@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen p-4">
+
+    <!-- Header -->
+    <div class="max-w-lg mx-auto">
+        <div class="flex items-center justify-between mb-6">
+            <a href="/play/{{ player.id }}" class="glass rounded-full px-4 py-2 text-white font-bold text-sm
+                      hover:bg-white/20 transition active:scale-95">
+                ← Zurueck
+            </a>
+            <a href="/" class="glass rounded-full px-4 py-2 text-white font-bold text-sm
+                      hover:bg-white/20 transition active:scale-95">
+                🏠 Start
+            </a>
+        </div>
+
+        <!-- Spieler-Karte -->
+        <div class="glass-strong rounded-3xl p-6 text-center mb-6 bounce-in">
+            <div class="text-6xl mb-2">{{ player.avatar_emoji }}</div>
+            <h1 class="text-2xl font-black text-gray-800">{{ player.name }}</h1>
+            <div class="flex justify-center gap-4 mt-3">
+                <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full font-bold text-sm">
+                    ⭐ Level {{ player.current_level }}
+                </span>
+                <span class="bg-fox-100 text-fox-700 px-3 py-1 rounded-full font-bold text-sm">
+                    🔥 {{ player.streak }} Serie
+                </span>
+            </div>
+        </div>
+
+        <!-- Gesamt-Stats -->
+        <div class="grid grid-cols-2 gap-3 mb-6">
+            <div class="glass-strong rounded-2xl p-4 text-center slide-up">
+                <div class="text-3xl font-black text-purple-600">{{ player.total_solved }}</div>
+                <div class="text-sm text-gray-500 font-semibold">Geloest</div>
+            </div>
+            <div class="glass-strong rounded-2xl p-4 text-center slide-up">
+                <div class="text-3xl font-black text-fox-500">{{ rate }}%</div>
+                <div class="text-sm text-gray-500 font-semibold">Erfolgsquote</div>
+            </div>
+            <div class="glass-strong rounded-2xl p-4 text-center slide-up">
+                <div class="text-3xl font-black text-blue-500">{{ player.total_attempts }}</div>
+                <div class="text-sm text-gray-500 font-semibold">Versuche</div>
+            </div>
+            <div class="glass-strong rounded-2xl p-4 text-center slide-up">
+                <div class="text-3xl font-black text-green-500">{{ player.best_streak }}</div>
+                <div class="text-sm text-gray-500 font-semibold">Beste Serie 🔥</div>
+            </div>
+        </div>
+
+        <!-- Stats pro Typ -->
+        {% if stats_by_type %}
+        <div class="glass-strong rounded-2xl p-5 mb-6 slide-up">
+            <h2 class="font-bold text-gray-800 text-lg mb-4">📊 Nach Raetsel-Typ</h2>
+            <div class="space-y-4">
+                {% for key, stat in stats_by_type.items() %}
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-semibold text-gray-700">
+                            {{ type_labels.get(key, (key, ''))[1] }} {{ type_labels.get(key, (key, ''))[0] }}
+                        </span>
+                        <span class="text-sm text-gray-500">
+                            {{ stat.correct }}/{{ stat.total }} ({{ stat.rate }}%)
+                        </span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div class="h-3 rounded-full progress-fill
+                                    {% if stat.rate >= 70 %}bg-green-400
+                                    {% elif stat.rate >= 40 %}bg-yellow-400
+                                    {% else %}bg-red-400{% endif %}"
+                             style="width: {{ stat.rate }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Letzte Versuche -->
+        {% if recent %}
+        <div class="glass-strong rounded-2xl p-5 mb-6 slide-up">
+            <h2 class="font-bold text-gray-800 text-lg mb-4">🕐 Letzte Versuche</h2>
+            <div class="space-y-2 max-h-80 overflow-y-auto">
+                {% for attempt in recent %}
+                <div class="flex items-center gap-3 p-2 rounded-xl
+                            {% if attempt.is_correct %}bg-green-50{% else %}bg-red-50{% endif %}">
+                    <span class="text-xl">{% if attempt.is_correct %}✅{% else %}❌{% endif %}</span>
+                    <div class="flex-1">
+                        <span class="text-sm font-semibold text-gray-700">
+                            {{ type_labels.get(attempt.puzzle_type, (attempt.puzzle_type, ''))[1] }}
+                            {{ type_labels.get(attempt.puzzle_type, (attempt.puzzle_type, ''))[0] }}
+                        </span>
+                        <span class="text-xs text-gray-400 ml-2">Level {{ attempt.difficulty }}</span>
+                    </div>
+                    {% if attempt.time_seconds %}
+                    <span class="text-xs text-gray-400">{{ "%.1f"|format(attempt.time_seconds) }}s</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Weiter spielen -->
+        <a href="/play/{{ player.id }}"
+           class="block w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white
+                  font-bold text-lg py-4 rounded-2xl shadow-lg text-center
+                  hover:shadow-xl transition active:scale-95 mb-8">
+            Weiter knobeln! 🦊
+        </a>
+    </div>
+</div>
+{% endblock %}

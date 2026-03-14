@@ -1,0 +1,316 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen flex flex-col" x-data="puzzleGame()" x-init="loadPuzzle()">
+
+    <!-- Header -->
+    <header class="glass p-3 flex items-center justify-between sticky top-0 z-40">
+        <a href="/" class="flex items-center gap-2 text-white">
+            <span class="text-2xl">🦊</span>
+            <span class="font-bold hidden sm:inline">KnobelFuchs</span>
+        </a>
+
+        <div class="flex items-center gap-3">
+            <!-- Streak -->
+            <div class="glass rounded-full px-3 py-1 text-white font-bold text-sm flex items-center gap-1"
+                 :class="streak > 0 ? 'pulse-glow' : ''">
+                🔥 <span x-text="streak"></span>
+            </div>
+            <!-- Level -->
+            <div class="glass rounded-full px-3 py-1 text-white font-bold text-sm">
+                ⭐ Level <span x-text="level"></span>
+            </div>
+            <!-- Avatar + Name -->
+            <a href="/dashboard/{{ player.id }}" class="flex items-center gap-1 text-white">
+                <span class="text-2xl">{{ player.avatar_emoji }}</span>
+                <span class="font-semibold hidden sm:inline">{{ player.name }}</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex items-center justify-center p-4">
+        <div class="w-full max-w-lg">
+
+            <!-- Loading -->
+            <div x-show="loading" x-cloak class="text-center">
+                <div class="text-6xl mb-4 animate-bounce">🦊</div>
+                <p class="text-white text-xl font-bold">Neues Raetsel wird geladen...</p>
+            </div>
+
+            <!-- Puzzle Card -->
+            <div x-show="!loading && !showResult" x-cloak class="slide-up">
+                <div class="glass-strong rounded-3xl p-6 shadow-2xl">
+
+                    <!-- Typ-Badge -->
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-bold">
+                            <span x-text="puzzleEmoji"></span>
+                            <span x-text="puzzleTypeLabel"></span>
+                        </span>
+                        <span class="text-gray-400 text-sm" x-text="'Level ' + difficulty"></span>
+                    </div>
+
+                    <!-- Frage -->
+                    <div class="text-center mb-6">
+                        <p class="text-xl font-bold text-gray-800 leading-relaxed whitespace-pre-line"
+                           x-text="question"></p>
+                    </div>
+
+                    <!-- Optionen -->
+                    <div class="space-y-3">
+                        <template x-for="(option, idx) in options" :key="idx">
+                            <button @click="selectAnswer(option)"
+                                    class="btn-option w-full text-left px-5 py-4 rounded-2xl font-semibold text-lg
+                                           border-2 transition-all"
+                                    :class="selectedAnswer === option
+                                        ? 'bg-fox-100 border-fox-400 text-fox-700'
+                                        : 'bg-white border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50'"
+                                    :disabled="answered">
+                                <span class="inline-flex items-center gap-3">
+                                    <span class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
+                                          :class="selectedAnswer === option
+                                              ? 'bg-fox-400 text-white'
+                                              : 'bg-gray-100 text-gray-500'"
+                                          x-text="['A','B','C','D'][idx]"></span>
+                                    <span x-text="option"></span>
+                                </span>
+                            </button>
+                        </template>
+                    </div>
+
+                    <!-- Aktionen -->
+                    <div class="flex gap-3 mt-6">
+                        <button @click="getHint()"
+                                class="flex-1 py-3 rounded-xl font-bold text-purple-600 bg-purple-50
+                                       border-2 border-purple-200 hover:bg-purple-100 transition
+                                       active:scale-95"
+                                :disabled="hintShown || answered"
+                                :class="hintShown ? 'opacity-50 cursor-not-allowed' : ''">
+                            💡 Hinweis
+                        </button>
+                        <button @click="submitAnswer()"
+                                class="flex-1 py-3 rounded-xl font-bold text-white
+                                       shadow-lg transition active:scale-95"
+                                :class="selectedAnswer
+                                    ? 'bg-fox-500 hover:bg-fox-600 hover:shadow-xl'
+                                    : 'bg-gray-300 cursor-not-allowed'"
+                                :disabled="!selectedAnswer || answered">
+                            Pruefen ✓
+                        </button>
+                    </div>
+
+                    <!-- Hinweis-Anzeige -->
+                    <div x-show="hintShown" x-cloak
+                         class="mt-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 text-center bounce-in">
+                        <span class="text-yellow-700 font-semibold">💡 <span x-text="hintText"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ergebnis -->
+            <div x-show="showResult" x-cloak class="text-center">
+                <div class="glass-strong rounded-3xl p-8 shadow-2xl" :class="isCorrect ? 'bounce-in' : 'shake'">
+
+                    <!-- Emoji-Feedback -->
+                    <div class="text-7xl mb-4" x-text="isCorrect ? '🎉' : '💪'"></div>
+
+                    <!-- Nachricht -->
+                    <p class="text-2xl font-black mb-2"
+                       :class="isCorrect ? 'text-green-600' : 'text-orange-600'"
+                       x-text="resultMessage"></p>
+
+                    <!-- Richtige Antwort (bei falsch) -->
+                    <div x-show="!isCorrect" class="mb-4">
+                        <p class="text-gray-500 text-sm">Die richtige Antwort war:</p>
+                        <p class="text-lg font-bold text-gray-800" x-text="correctAnswer"></p>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="flex justify-center gap-6 mb-6 text-sm">
+                        <div class="text-center">
+                            <div class="text-2xl font-black text-purple-600" x-text="totalSolved"></div>
+                            <div class="text-gray-500">Geloest</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-black text-fox-500" x-text="'🔥 ' + streak"></div>
+                            <div class="text-gray-500">Serie</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-black text-blue-500"
+                                 :class="levelChanged ? 'level-up-flash' : ''"
+                                 x-text="'⭐ ' + level"></div>
+                            <div class="text-gray-500">Level</div>
+                        </div>
+                    </div>
+
+                    <!-- Level-Up Nachricht -->
+                    <div x-show="levelChanged && levelDirection === 'up'" x-cloak
+                         class="bg-gradient-to-r from-fox-100 to-yellow-100 rounded-xl p-3 mb-4 bounce-in">
+                        <p class="font-bold text-fox-700">🌟 Level Up! Du bist jetzt Level <span x-text="level"></span>!</p>
+                    </div>
+
+                    <!-- Naechstes Raetsel -->
+                    <button @click="loadPuzzle()"
+                            class="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white
+                                   font-bold text-lg py-4 rounded-2xl shadow-lg
+                                   hover:shadow-xl transition active:scale-95">
+                        Naechstes Raetsel →
+                    </button>
+
+                    <!-- Dashboard Link -->
+                    <a href="/dashboard/{{ player.id }}"
+                       class="block mt-3 text-purple-300 hover:text-white font-semibold text-sm transition">
+                        📊 Zum Dashboard
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Konfetti Canvas -->
+    <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+</div>
+
+<script src="/static/confetti.js"></script>
+<script>
+function puzzleGame() {
+    return {
+        // State
+        loading: true,
+        question: '',
+        options: [],
+        puzzleEmoji: '',
+        puzzleType: '',
+        difficulty: 1,
+        selectedAnswer: null,
+        answered: false,
+        hintShown: false,
+        hintText: '',
+        hintUsed: false,
+
+        // Ergebnis
+        showResult: false,
+        isCorrect: false,
+        resultMessage: '',
+        correctAnswer: '',
+
+        // Player stats
+        level: {{ player.current_level }},
+        streak: {{ player.streak }},
+        totalSolved: {{ player.total_solved }},
+        levelChanged: false,
+        levelDirection: '',
+
+        // Timer
+        startTime: null,
+
+        get puzzleTypeLabel() {
+            const labels = {
+                'math': 'Mathe',
+                'logic': 'Logik',
+                'word': 'Woerter',
+                'emoji': 'Emoji',
+                'riddle': 'Raetsel'
+            };
+            return labels[this.puzzleType] || this.puzzleType;
+        },
+
+        async loadPuzzle() {
+            this.loading = true;
+            this.showResult = false;
+            this.selectedAnswer = null;
+            this.answered = false;
+            this.hintShown = false;
+            this.hintText = '';
+            this.hintUsed = false;
+            this.levelChanged = false;
+
+            try {
+                const res = await fetch('/api/puzzle/{{ player.id }}');
+                const data = await res.json();
+
+                this.question = data.question;
+                this.options = data.options;
+                this.puzzleEmoji = data.emoji;
+                this.puzzleType = data.type;
+                this.difficulty = data.difficulty;
+                this.level = data.player_level;
+                this.streak = data.streak;
+                this.startTime = Date.now();
+            } catch (e) {
+                this.question = 'Fehler beim Laden. Versuche es nochmal!';
+                this.options = [];
+            }
+
+            this.loading = false;
+        },
+
+        selectAnswer(option) {
+            if (!this.answered) {
+                this.selectedAnswer = option;
+            }
+        },
+
+        async submitAnswer() {
+            if (!this.selectedAnswer || this.answered) return;
+            this.answered = true;
+
+            const timeSeconds = (Date.now() - this.startTime) / 1000;
+
+            try {
+                const res = await fetch('/api/answer/{{ player.id }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        answer: this.selectedAnswer,
+                        time_seconds: Math.round(timeSeconds * 10) / 10,
+                        hint_used: this.hintUsed
+                    })
+                });
+                const data = await res.json();
+
+                this.isCorrect = data.is_correct;
+                this.resultMessage = data.message;
+                this.correctAnswer = data.correct_answer;
+                this.streak = data.streak;
+                this.totalSolved = data.total_solved;
+
+                // Level-Aenderung
+                if (data.level_change && data.level_change.direction !== 'stay') {
+                    this.levelChanged = true;
+                    this.levelDirection = data.level_change.direction;
+                }
+                this.level = data.level;
+
+                // Konfetti bei richtiger Antwort
+                if (this.isCorrect) {
+                    launchConfetti();
+                }
+
+                this.showResult = true;
+
+            } catch (e) {
+                this.resultMessage = 'Fehler beim Pruefen. Versuche es nochmal!';
+                this.showResult = true;
+            }
+        },
+
+        async getHint() {
+            if (this.hintShown) return;
+
+            try {
+                const res = await fetch('/api/hint/{{ player.id }}');
+                const data = await res.json();
+                this.hintText = data.hint;
+                this.hintShown = true;
+                this.hintUsed = true;
+            } catch (e) {
+                this.hintText = 'Denke gut nach!';
+                this.hintShown = true;
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

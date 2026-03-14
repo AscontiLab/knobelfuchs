@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="min-h-screen flex flex-col items-center justify-center p-4" x-data="playerSelect()">
+
+    <!-- Logo -->
+    <div class="text-center mb-8 bounce-in">
+        <div class="text-7xl mb-2">🦊</div>
+        <h1 class="text-4xl font-black text-white drop-shadow-lg">KnobelFuchs</h1>
+        <p class="text-white/80 text-lg mt-1">Raetsel, die schlau machen!</p>
+    </div>
+
+    <!-- Bestehende Spieler -->
+    {% if players %}
+    <div class="w-full max-w-md mb-6 slide-up">
+        <h2 class="text-white font-bold text-lg mb-3 text-center">Wer spielt?</h2>
+        <div class="grid grid-cols-2 gap-3">
+            {% for p in players %}
+            <a href="/play/{{ p.id }}"
+               class="glass-strong rounded-2xl p-4 text-center hover:scale-105 transition-transform cursor-pointer block">
+                <div class="text-4xl mb-1">{{ p.avatar_emoji }}</div>
+                <div class="font-bold text-gray-800">{{ p.name }}</div>
+                <div class="text-sm text-gray-500">Level {{ p.current_level }} · 🔥 {{ p.streak }}</div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Neuer Spieler -->
+    <div class="w-full max-w-md slide-up">
+        <div class="glass rounded-2xl p-6">
+            <h2 class="text-white font-bold text-lg mb-4 text-center">
+                {% if players %}Oder neuen Spieler erstellen{% else %}Neuen Spieler erstellen{% endif %}
+            </h2>
+
+            <form method="post" action="/player" class="space-y-4">
+                <!-- Name -->
+                <div>
+                    <input type="text" name="name" required placeholder="Dein Name"
+                           class="w-full rounded-xl px-4 py-3 text-lg font-semibold text-gray-800
+                                  border-2 border-transparent focus:border-fox-400 focus:outline-none
+                                  placeholder-gray-400"
+                           maxlength="20">
+                </div>
+
+                <!-- Avatar -->
+                <div>
+                    <p class="text-white/80 text-sm mb-2">Waehle deinen Avatar:</p>
+                    <div class="grid grid-cols-8 gap-2">
+                        {% for emoji in avatars %}
+                        <label class="cursor-pointer">
+                            <input type="radio" name="avatar" value="{{ emoji }}"
+                                   class="hidden peer" {% if loop.first %}checked{% endif %}>
+                            <div class="text-2xl text-center p-1 rounded-lg
+                                        peer-checked:bg-white/30 peer-checked:ring-2 peer-checked:ring-fox-400
+                                        hover:bg-white/20 transition">
+                                {{ emoji }}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Submit -->
+                <button type="submit"
+                        class="w-full bg-fox-500 hover:bg-fox-600 text-white font-bold text-lg
+                               py-3 rounded-xl shadow-lg hover:shadow-xl transition
+                               active:scale-95">
+                    Los geht's! 🚀
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function playerSelect() {
+    return {};
+}
+</script>
+{% endblock %}
