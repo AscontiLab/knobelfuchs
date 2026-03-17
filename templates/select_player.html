@@ -6,7 +6,7 @@
     <div class="text-center mb-8 bounce-in">
         <div class="text-7xl mb-2" style="animation: floatAround 4s ease-in-out infinite;">🦊</div>
         <h1 class="text-4xl font-black text-white drop-shadow-lg">KnobelFuchs</h1>
-        <p class="text-white/80 text-lg mt-1 fade-in" style="animation-delay: 0.3s;">Raetsel, die schlau machen!</p>
+        <p class="text-white/90 text-lg mt-1 fade-in" style="animation-delay: 0.3s;">Raetsel, die schlau machen!</p>
     </div>
 
     <!-- Bestehende Spieler -->
@@ -48,10 +48,12 @@
 
                 <!-- Avatar -->
                 <div>
-                    <p class="text-white/80 text-sm mb-2">Waehle deinen Avatar:</p>
+                    <p class="text-white/90 text-sm mb-2">Waehle deinen Avatar:</p>
                     <div class="grid grid-cols-8 gap-2">
                         {% for emoji in avatars %}
-                        <label class="cursor-pointer">
+                        <label class="cursor-pointer" tabindex="0" role="radio"
+                               aria-label="Avatar {{ emoji }}"
+                               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.querySelector('input').checked=true;this.querySelector('input').dispatchEvent(new Event('change'));}">
                             <input type="radio" name="avatar" value="{{ emoji }}"
                                    class="hidden peer" {% if loop.first %}checked{% endif %}>
                             <div class="text-2xl text-center p-1 rounded-lg transition-all duration-200
@@ -66,22 +68,24 @@
                 </div>
 
                 <div>
-                    <p class="text-white/80 text-sm mb-2">Wie soll KnobelFuchs mit dir sprechen?</p>
+                    <p class="text-white/90 text-sm mb-2">Wie soll KnobelFuchs mit dir sprechen?</p>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <label class="cursor-pointer">
+                        <label class="cursor-pointer" tabindex="0"
+                               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.querySelector('input').checked=true;this.querySelector('input').dispatchEvent(new Event('change'));}">
                             <input type="radio" name="profile_mode" value="kid" class="hidden peer" checked>
                             <div class="rounded-xl px-4 py-3 text-white/90 border border-white/20 transition-all
                                         peer-checked:bg-white/25 peer-checked:ring-2 peer-checked:ring-fox-400">
                                 <div class="font-bold">Kinderprofil</div>
-                                <div class="text-xs text-white/70">spielerisch, motivierend, kindgerechter Ton</div>
+                                <div class="text-xs text-white/90">spielerisch, motivierend, kindgerechter Ton</div>
                             </div>
                         </label>
-                        <label class="cursor-pointer">
+                        <label class="cursor-pointer" tabindex="0"
+                               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.querySelector('input').checked=true;this.querySelector('input').dispatchEvent(new Event('change'));}">
                             <input type="radio" name="profile_mode" value="adult" class="hidden peer">
                             <div class="rounded-xl px-4 py-3 text-white/90 border border-white/20 transition-all
                                         peer-checked:bg-white/25 peer-checked:ring-2 peer-checked:ring-fox-400">
                                 <div class="font-bold">Erwachsenenprofil</div>
-                                <div class="text-xs text-white/70">nuechterner Ton, gleiche Lernlogik</div>
+                                <div class="text-xs text-white/90">nuechterner Ton, gleiche Lernlogik</div>
                             </div>
                         </label>
                     </div>

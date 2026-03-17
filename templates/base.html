@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>KnobelFuchs 🦊</title>
@@ -98,10 +98,9 @@
             overflow: hidden;
             -webkit-tap-highlight-color: transparent;
         }
-        .btn-option:focus,
         .btn-option:focus-visible {
-            outline: none !important;
-            box-shadow: none;
+            outline: 2px solid #f97316;
+            outline-offset: 2px;
         }
         .btn-option:active {
             transform: scale(0.96);
@@ -309,10 +308,23 @@
         .glow-orange {
             box-shadow: 0 0 15px rgba(249, 115, 22, 0.4), 0 0 30px rgba(249, 115, 22, 0.2);
         }
+
+        /* Accessibility: sr-only */
+        .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+            body { background-size: 100% 100% !important; }
+        }
     </style>
     {% block head %}{% endblock %}
 </head>
 <body class="font-nunito">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:bg-purple-600 focus:text-white focus:p-2 focus:rounded focus:z-50">Zum Inhalt springen</a>
     <!-- Schwebende Hintergrund-Emojis -->
     <div class="floating-bg float-1">🧩</div>
     <div class="floating-bg float-2">🔢</div>
@@ -321,7 +333,7 @@
     <div class="floating-bg float-5">🦊</div>
     <div class="floating-bg float-6">😎</div>
 
-    <div class="relative z-10">
+    <div id="main-content" class="relative z-10">
         {% block content %}{% endblock %}
     </div>
     {% block scripts %}{% endblock %}
