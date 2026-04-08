@@ -45,6 +45,7 @@ async def create_player(
     if existing:
         return RedirectResponse(url=f"/play/{existing.id}", status_code=303)
 
+    avatar = avatar if avatar in AVATAR_EMOJIS else "🦊"
     player = Player(
         name=name,
         avatar_emoji=avatar,
